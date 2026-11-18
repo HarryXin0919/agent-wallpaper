@@ -1,0 +1,23 @@
+{
+  "name": "agent-wallpaper",
+  "private": true,
+  "version": "0.1.0",
+  "description": "A live desktop wallpaper for Windows that shows what Claude Code and Codex are doing, read from their local session logs.",
+  "license": "MIT",
+  "author": "Harry Alexander Xin",
+  "repository": { "type": "git", "url": "https://github.com/HarryXin0919/agent-wallpaper.git" },
+  "keywords": ["claude-code", "codex", "wallpaper", "desktop", "electron", "windows", "ai-agents"],
+  "os": ["win32"],
+  "main": "app/main.mjs",
+  "type": "module",
+  "scripts": {
+    "start": "electron .",
+    "startup:add": "powershell -NoProfile -ExecutionPolicy Bypass -File app/startup.ps1",
+    "startup:remove": "powershell -NoProfile -ExecutionPolicy Bypass -File app/startup.ps1 -Remove",
+    "screenshot": "node tools/demoframe.mjs docs/screenshot.png"
+  },
+  "dependencies": {
+    "electron": "45.3.4",
+    "koffi": "3.3.8"
+  }
+}
