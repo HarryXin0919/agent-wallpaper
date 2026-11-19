@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Unit tests (log readers, quota estimate, settings, text)
+        run: npm test
+      - name: Launch check (starts the app on made-up logs and captures the screen)
+        run: npm run test:launch
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: launch-${{ matrix.os }}
+          path: out/launch-*
+          if-no-files-found: ignore

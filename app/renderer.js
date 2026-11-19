@@ -52,10 +52,10 @@
   // which looks like live frosted glass without blurring anything every frame
   let blurURL = null;
   function setWallpaper(w) {
-    if (!w || !w.url) return;
-    // the real wallpaper shows through the window; over a moving one the glass is tinted instead of frosted
+    if (!w) return;
+    // the real wallpaper shows through the window; over a moving one (or on macOS) the glass is tinted instead of frosted
     liveWall = !!w.live; glassClass();
-    if (w.live) return;
+    if (w.live || !w.url) return;
     const img = new Image();
     img.onload = () => {
       const W = window.innerWidth, H = window.innerHeight, k = 0.25; // a quarter size is plenty for a blur

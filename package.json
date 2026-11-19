@@ -12,6 +12,8 @@
   "type": "module",
   "scripts": {
     "start": "electron .",
+    "test": "node --test \"test/*.test.mjs\"",
+    "test:launch": "node test/launch.mjs",
     "startup:add": "powershell -NoProfile -ExecutionPolicy Bypass -File app/startup.ps1",
     "startup:remove": "powershell -NoProfile -ExecutionPolicy Bypass -File app/startup.ps1 -Remove",
     "screenshot": "node tools/demoframe.mjs docs/screenshot.png"

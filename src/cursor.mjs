@@ -119,7 +119,8 @@ export class CursorLive {
   }
   // for the settings window
   static find() {
-    const p = path.join(process.env.APPDATA || '', 'Cursor', 'User', 'globalStorage', 'state.vscdb');
+    const base = process.platform === 'win32' ? process.env.APPDATA || '' : process.platform === 'darwin' ? path.join(process.env.HOME || '', 'Library', 'Application Support') : path.join(process.env.HOME || '', '.config');
+    const p = path.join(base, 'Cursor', 'User', 'globalStorage', 'state.vscdb');
     return fs.existsSync(p) ? p : null;
   }
 }

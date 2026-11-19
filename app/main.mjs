@@ -15,7 +15,7 @@ import { Ledger, estimate } from '../src/estimate.mjs';
 import * as S from '../src/settings.mjs';
 import '../src/scene.js';  // Scene.stateOf, for notifications
 import '../src/i18n.js';   // I18N
-import * as desk from './desktop.mjs';
+import desk from './platform.mjs'; // Windows or macOS desktop layer
 
 const { Scene, I18N } = globalThis;
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -24,19 +24,26 @@ const CODEX = process.env.WALL_CODEX || path.join(os.homedir(), '.codex');
 
 // keep Electron's own working files inside this folder, and keep it quiet
 app.setName('Agent Wallpaper');
-app.setPath('userData', path.join(here, '..', '.runtime'));
-app.setAppUserModelId(process.execPath); // lets an unpackaged Electron show Windows notifications
+const MAC = process.platform === 'darwin', WIN = process.platform === 'win32';
+// run from the source folder: keep Electron's working files there; an installed copy uses the usual per-user folder
+if (process.env.WALL_TEST) app.setPath('userData', process.env.WALL_TEST); // test runs: a folder of their own
+else if (!app.isPackaged) app.setPath('userData', path.join(here, '..', '.runtime'));
+if (WIN) app.setAppUserModelId(app.isPackaged ? 'dev.agentwallpaper.app' : process.execPath); // needed for Windows notifications
+// following the Claude app from inside the program (macOS, and installed copies): it starts at login, stays in the
+// tray, and shows the wallpaper while Claude is open. A copy run from source on Windows uses app/watch.ps1 instead.
+const FOLLOW_IN_APP = MAC || app.isPackaged;
+const APPDATA = app.getPath('appData'); // %APPDATA% on Windows, ~/Library/Application Support on macOS
 app.commandLine.appendSwitch('disk-cache-size', '0');
 app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion,MediaRouter,Translate,AutofillServerCommunication');
 app.commandLine.appendSwitch('disable-background-networking');
 for (const f of (process.env.WALL_FLAGS || '').split(',').filter(Boolean)) app.commandLine.appendSwitch(f); // for testing
-if (!app.requestSingleInstanceLock()) { app.quit(); process.exit(0); }
+if (!process.env.WALL_TEST && !app.requestSingleInstanceLock()) { app.quit(); process.exit(0); }
 app.on('second-instance', () => openSettings()); // starting it again while it runs opens the settings
 
 const SETTINGS = path.join(app.getPath('userData'), 'settings.json');
 let cfg = S.load(SETTINGS);
 const t = () => I18N.t;
-let tray = null, settingsWin = null, quitting = false, paused = false, showText = !process.env.WALL_NOTEXT, shown = true;
+let tray = null, settingsWin = null, quitting = false, paused = false, showText = !process.env.WALL_NOTEXT, shown = true, hiddenByFollow = false;
 
 function log(...a) { if (process.env.WALL_LOG) console.log(new Date().toISOString(), ...a.map((x) => typeof x === 'string' ? x : JSON.stringify(x))); }
 
@@ -53,8 +60,8 @@ function buildSources() {
   const s = cfg.sources, list = [];
   if (s.claude.on) list.push({ id: 'claude', name: 'Claude', color: s.claude.color, kind: 'claude', r: reuse('claude', () => new Live(ROOT, { hours: 12 })) });
   if (s.codex.on) list.push({ id: 'codex', name: 'Codex', color: s.codex.color, kind: 'codex', r: reuse('codex', () => new CodexLive(CODEX, { hours: 12 })) });
-  const cdb = CursorLive.find();
-  if (s.cursor.on && cdb) list.push({ id: 'cursor', name: 'Cursor', color: s.cursor.color, kind: 'cursor', r: reuse('cursor', () => new CursorLive(cdb, { hours: 12 })) });
+  const cdb = process.env.WALL_CURSOR || CursorLive.find();
+  if ((s.cursor.on || process.env.WALL_CURSOR) && cdb) list.push({ id: 'cursor', name: 'Cursor', color: s.cursor.color, kind: 'cursor', r: reuse('cursor', () => new CursorLive(cdb, { hours: 12 })) });
   for (const c of cfg.custom) if (c.on) list.push({ id: 'x' + c.id, name: c.name, color: c.color, kind: c.kind, r: reuse(`x:${c.kind}:${c.path}`, () => (c.kind === 'claude' ? new Live(claudeRoot(c.path), { hours: 12 }) : new CodexLive(codexHome(c.path), { hours: 12 }))) });
   sources = list;
 }
@@ -101,7 +108,11 @@ function displaysWanted() {
   if (cfg.screens !== 'primary') { const d = all.find((x) => String(x.id) === String(cfg.screens)); if (d) return [d]; }
   return [screen.getPrimaryDisplay()];
 }
-function rectOf(d) { const r = screen.dipToScreenRect(null, d.bounds); return { x: r.x, y: r.y, w: r.width, h: r.height, dip: d.bounds, f: d.scaleFactor }; }
+// a screen's rectangle in the units the mouse and the desktop layer use: real pixels on Windows, points on macOS
+function rectOf(d) {
+  if (!WIN) return { x: d.bounds.x, y: d.bounds.y, w: d.bounds.width, h: d.bounds.height, dip: d.bounds, f: 1 };
+  const r = screen.dipToScreenRect(null, d.bounds); return { x: r.x, y: r.y, w: r.width, h: r.height, dip: d.bounds, f: d.scaleFactor };
+}
 const hwnd = (r) => desk.hwndOf(r.win.getNativeWindowHandle());
 const live = (r) => r.win && !r.win.isDestroyed();
 function sendTo(r, ch, data) { if (live(r)) r.win.webContents.send(ch, data); }
@@ -115,9 +126,11 @@ function createWindow(d) {
     x: d.bounds.x, y: d.bounds.y, width: d.bounds.width, height: d.bounds.height,
     frame: false, show: false, skipTaskbar: true, focusable: false, resizable: false, movable: false,
     minimizable: false, maximizable: false, hasShadow: false, transparent: true, backgroundColor: '#00000000', title: 'Agent Wallpaper',
+    ...(MAC ? { type: 'desktop', enableLargerThanScreen: true } : {}), // macOS: above the wallpaper, below Finder's icons
     webPreferences: { preload: path.join(here, 'preload.cjs'), contextIsolation: true, sandbox: true, backgroundThrottling: false, spellcheck: false },
   });
   rec.win = win;
+  if (MAC) { win.setVisibleOnAllWorkspaces(true); win.setIgnoreMouseEvents(true); }
   win.setMenu(null);
   win.loadFile(path.join(here, 'index.html'));
   if (process.env.WALL_LOG) win.webContents.on('console-message', (e) => log('page', e.level, e.message, (e.sourceId || '').split('/').pop() + ':' + e.lineNumber));
@@ -152,9 +165,11 @@ function syncWindows() {
 
 // ---------------------------------------------------------------------------------------------------------------
 // The wallpaper image (read from the copy Windows keeps), for the frosted glass when no live wallpaper runs.
-const WALL_FILE = path.join(process.env.APPDATA || '', 'Microsoft', 'Windows', 'Themes', 'TranscodedWallpaper');
+const WALL_FILE = path.join(APPDATA, 'Microsoft', 'Windows', 'Themes', 'TranscodedWallpaper');
 let wallpaper = null, wallMtime = 0;
 function readWallpaper() {
+  // macOS: the window is transparent over the real wallpaper, which shows through
+  if (!WIN) { if (wallpaper) return false; wallpaper = { url: null, live: true }; return true; }
   try {
     const st = fs.statSync(WALL_FILE);
     if (st.mtimeMs === wallMtime && wallpaper) return false;
@@ -169,12 +184,15 @@ function readWallpaper() {
 // Where the desktop icons are, so the panels never sit under them. A small PowerShell helper reads them (read-only).
 let iconsRaw = null, iconsReal = false, helper = null, helperBuf = '';
 function estimateIcons(d) {
-  let n = 2;
-  for (const dir of [path.join(os.homedir(), 'Desktop'), 'C:/Users/Public/Desktop']) { try { n += fs.readdirSync(dir).filter((f) => !/^desktop\.ini$/i.test(f) && !/^~\$/.test(f)).length; } catch {} }
+  let n = WIN ? 2 : 0;
+  for (const dir of [path.join(os.homedir(), 'Desktop'), ...(WIN ? ['C:/Users/Public/Desktop'] : [])]) { try { n += fs.readdirSync(dir).filter((f) => !/^desktop\.ini$/i.test(f) && !/^~\$/.test(f) && !/^\./.test(f)).length; } catch {} }
   const rows = Math.max(1, Math.floor((d.bounds.height - 56) / 100));
+  // Windows fills columns from the left; Finder from the right, below the menu bar
+  if (MAC) return Array.from({ length: n }, (_, i) => ({ x: d.bounds.width - 96 - Math.floor(i / rows) * 96, y: 30 + (i % rows) * 100, w: 90, h: 92 }));
   return Array.from({ length: n }, (_, i) => ({ x: 4 + Math.floor(i / rows) * 80, y: 6 + (i % rows) * 100, w: 74, h: 90 }));
 }
 function startHelper() {
+  if (!WIN) return; // macOS: Finder's icon positions are not readable without asking for permission; an estimate is used
   try {
     helper = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', path.join(here, 'icons.ps1')], { windowsHide: true, stdio: ['pipe', 'pipe', 'ignore'] });
     helper.stdout.on('data', (b) => {
@@ -224,7 +242,7 @@ function pushData() { const d = visibleSnap(); send('data', d); watchStates(d); 
 // Plan usage and token use (local only).
 // Claude quota: a usage service on this computer (127.0.0.1:8787, e.g. the ClaudeOrb proxy) has live figures while
 // its sign-in works; otherwise the Claude app's own record, with an estimate between its readings.
-const PLAN_FILE = path.join(process.env.APPDATA || '', 'Claude', 'plan-usage-history.json');
+const PLAN_FILE = path.join(APPDATA, 'Claude', 'plan-usage-history.json');
 const ledger = new Ledger(ROOT, 5);
 let usage = null, usageBusy = false;
 function getLocal(port, pathname, ms) {
@@ -318,7 +336,7 @@ function quotaAlerts() {
 // ---------------------------------------------------------------------------------------------------------------
 // Clicking a card opens that session in its app.
 // The Claude app keeps one small file per session linking the log's id to its own local_… id (read-only here).
-const SESS_DIR = path.join(process.env.APPDATA || '', 'Claude', 'claude-code-sessions');
+const SESS_DIR = path.join(APPDATA, 'Claude', 'claude-code-sessions');
 let sessMap = new Map(), sessAt = 0;
 function loadSessions() {
   const m = new Map();
@@ -333,6 +351,7 @@ function openUrl(url) { log('open', url); shell.openExternal(url).catch((e) => l
 function openSession(id) {
   if (id.startsWith('cx:')) return openUrl(`codex://threads/${encodeURIComponent(id.slice(3))}`);
   if (id.startsWith('cu:')) {
+    if (MAC) { spawn('/usr/bin/open', ['-a', 'Cursor'], { detached: true, stdio: 'ignore' }).unref(); return; }
     const exe = path.join(process.env.LOCALAPPDATA || '', 'Programs', 'cursor', 'Cursor.exe');
     if (fs.existsSync(exe)) { spawn(exe, [], { detached: true, stdio: 'ignore' }).unref(); return; }
     return openUrl('cursor://');
@@ -401,8 +420,11 @@ function openSettings() {
   settingsWin.once('ready-to-show', () => settingsWin.show());
   settingsWin.on('closed', () => { settingsWin = null; });
 }
-ipcMain.handle('cfg:get', () => ({ cfg, lang: I18N.lang, info: sourceInfo(), displays: displayInfo(), keysOk, version: app.getVersion() }));
-ipcMain.handle('cfg:set', (_e, patch) => { const prev = cfg; cfg = S.apply(cfg, patch); S.save(SETTINGS, cfg); applyCfg(prev); return { cfg, lang: I18N.lang, info: sourceInfo(), displays: displayInfo(), keysOk }; });
+// the switch shows what is really set up (a login item or a Startup shortcut), not only what was last chosen
+const followOpenNow = () => { try { return FOLLOW_IN_APP ? app.getLoginItemSettings().openAtLogin : LINKS.some((n) => fs.existsSync(path.join(STARTUP, n))); } catch { return cfg.follow.open; } };
+const cfgView = () => ({ ...cfg, follow: { ...cfg.follow, open: followOpenNow() } });
+ipcMain.handle('cfg:get', () => ({ cfg: cfgView(), lang: I18N.lang, info: sourceInfo(), displays: displayInfo(), keysOk, version: app.getVersion() }));
+ipcMain.handle('cfg:set', (_e, patch) => { const prev = cfg; cfg = S.apply(cfg, patch); if (patch && patch.follow && typeof patch.follow.open === 'boolean') startupShortcut(patch.follow.open); S.save(SETTINGS, cfg); applyCfg(prev); return { cfg: cfgView(), lang: I18N.lang, info: sourceInfo(), displays: displayInfo(), keysOk }; });
 ipcMain.handle('cfg:pickFolder', async () => {
   const r = await dialog.showOpenDialog(settingsWin, { properties: ['openDirectory', 'showHiddenFiles'] });
   if (r.canceled || !r.filePaths[0]) return null;
@@ -418,7 +440,6 @@ function applyCfg(prev) {
   if (ch('sources') || ch('custom')) { buildSources(); pollAll(); codexUsage(); }
   if (ch('screens')) syncWindows();
   if (ch('keys')) registerKeys();
-  if (JSON.stringify(prev.follow.open) !== JSON.stringify(cfg.follow.open)) startupShortcut(cfg.follow.open);
   menu();
   send('view', view());
   pushData();
@@ -429,6 +450,8 @@ function applyCfg(prev) {
 const STARTUP = path.join(app.getPath('appData'), 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup');
 const LINKS = ['Agent Wallpaper (follow Claude).lnk', 'Claude 壁纸（跟随 Claude 打开）.lnk'];
 function startupShortcut(on) {
+  // macOS and installed copies: a login item; the program then waits in the tray for Claude
+  if (FOLLOW_IN_APP) { try { app.setLoginItemSettings({ openAtLogin: on, openAsHidden: true, args: ['--at-login'] }); } catch (e) { log('login item failed', String(e)); } return; }
   try {
     if (!on) { for (const n of LINKS) { const f = path.join(STARTUP, n); if (fs.existsSync(f)) fs.unlinkSync(f); } return; }
     if (LINKS.some((n) => fs.existsSync(path.join(STARTUP, n)))) return;
@@ -486,6 +509,9 @@ app.whenReady().then(() => {
   session.defaultSession.setPermissionRequestHandler((_w, _p, cb) => cb(false));
   I18N.set(I18N.pick(cfg.lang, app.getLocale()));
 
+  // started at login while Claude is not open yet: wait in the tray
+  const atLogin = process.argv.includes('--at-login') || (MAC && app.getLoginItemSettings().wasOpenedAtLogin);
+  if (FOLLOW_IN_APP && atLogin && !desk.claudeDesktopRunning()) { shown = false; hiddenByFollow = true; }
   buildSources(); pollAll();
   readWallpaper();
   refreshUsage(); setInterval(() => { if (!paused) refreshUsage(); }, 60000);
@@ -495,7 +521,8 @@ app.whenReady().then(() => {
   setInterval(() => { const lw = desk.liveWallpaper(); if (readWallpaper() || (wallpaper && wallpaper.live !== lw)) { wallpaper.live = lw; send('wallpaper', wallpaper); } }, 20000);
   syncWindows();
 
-  tray = new Tray(nativeImage.createFromPath(path.join(here, '..', 'assets', 'tray.png')));
+  if (MAC && app.dock) app.dock.hide(); // a menu-bar program, no Dock icon
+  tray = new Tray(nativeImage.createFromPath(path.join(here, '..', 'assets', MAC ? 'tray-16.png' : 'tray.png')));
   tray.on('click', () => setShown(!shown)); // left click: on / off; right click: the menu
   registerKeys(); menu();
   if (process.env.WALL_SETTINGS) openSettings();
@@ -509,11 +536,20 @@ app.whenReady().then(() => {
   setInterval(() => { if (!paused && pollAll()) pushData(); }, 2000);
   setInterval(pollMouse, 50);
   loadSessions();
-  // close together with the Claude desktop app (once it has been seen running)
+  // follow the Claude desktop app: close with it (once it has been seen running); with FOLLOW_IN_APP, hide instead and
+  // show again when Claude opens
   let seenClaude = false, missing = 0;
   if (!process.env.WALL_NOFOLLOW) setInterval(() => {
-    if (desk.claudeDesktopRunning()) { seenClaude = true; missing = 0; return; }
-    if (cfg.follow.close && seenClaude && ++missing >= 2) { log('Claude closed: quitting'); quit(); }
+    if (desk.claudeDesktopRunning()) {
+      seenClaude = true; missing = 0;
+      if (FOLLOW_IN_APP && hiddenByFollow && cfg.follow.open) { hiddenByFollow = false; log('Claude opened: showing'); setShown(true); }
+      return;
+    }
+    if (cfg.follow.close && seenClaude && ++missing >= 2) {
+      seenClaude = false;
+      if (FOLLOW_IN_APP) { if (shown) { hiddenByFollow = true; log('Claude closed: hiding'); setShown(false); } }
+      else { log('Claude closed: quitting'); quit(); }
+    }
   }, 4000);
   setInterval(() => { if (!paused) pushData(); }, 20000); // safety net, and keeps notifications timely
   // stay behind the icons (Explorer restarts), and rest while a full-screen window hides a screen
