@@ -1,8 +1,8 @@
 # Agent Wallpaper
 
-**Windows 动态桌面壁纸：实时显示 Claude Code、Codex 和 Cursor 正在做的事。**
+**Windows 和 macOS 动态桌面壁纸：实时显示 Claude Code、Codex 和 Cursor 正在做的事。**
 
-[English](README.md)
+[![CI](https://github.com/HarryXin0919/agent-wallpaper/actions/workflows/ci.yml/badge.svg)](https://github.com/HarryXin0919/agent-wallpaper/actions/workflows/ci.yml) [![Release](https://img.shields.io/github/v/release/HarryXin0919/agent-wallpaper)](https://github.com/HarryXin0919/agent-wallpaper/releases/latest) · [English](README.md)
 
 ![Agent Wallpaper：一个 Claude Code 任务和一个 Codex 任务正在进行，上方是用量面板](docs/screenshot.png)
 
@@ -18,19 +18,30 @@
 - **状态：** 正在思考、正在运行命令、等你批准、可能卡住了、已完成。
 - **用量面板：** Claude 的 5 小时额度和每周额度、Codex 额度、今日 tokens、每分钟实时用量。
 - **点卡片跳转：** 在 Claude 或 Codex 桌面端打开对应的会话。
-- **不挡图标：** 面板只放在桌面最大的空白区域，每 30 秒重新读取一次图标位置。支持 Wallpaper Engine 等动态壁纸；桌面被全屏窗口挡住时自动暂停。
-- **跟随 Claude：** 可以设置成打开 Claude 桌面端时自动出现，退出 Claude 时自动关闭。
-- **通知：** 任务完成、等你批准、额度超过你设的提醒线时，在右下角弹出 Windows 通知。
+- **不挡图标：** 面板只放在桌面最大的空白区域。支持 Wallpaper Engine 等动态壁纸；在 Windows 上，桌面被全屏窗口挡住时自动暂停。
+- **跟随 Claude：** 可以设置成打开 Claude 桌面端时自动出现，退出 Claude 时自动隐藏。
+- **通知：** 任务完成、等你批准、额度超过你设的提醒线时弹出系统通知。
 - **隐私模式：** 投屏时使用，只显示会话标题和操作类型，不显示提问原文、文件名和命令。
 - **中文或英文，** 显示在主屏幕或所有屏幕，大小、位置、玻璃深浅和动画都可以调。
 
-## 运行要求
+## 下载
 
-- Windows 10 或 11（程序用 Win32 接口把窗口放到桌面图标下面）
-- Node.js 18 或更高版本
-- 本机在使用 Claude Code 或 Codex（或两者都用）
+在 [Releases](https://github.com/HarryXin0919/agent-wallpaper/releases/latest) 下载最新版本：
 
-## 安装
+| 系统 | 文件 |
+|---|---|
+| Windows 10 / 11 | `Agent-Wallpaper-Setup-<版本>.exe`（安装到当前用户）或 `Agent-Wallpaper-<版本>-portable.exe`（免安装） |
+| macOS，Apple 芯片 | `Agent-Wallpaper-<版本>-mac-arm64.dmg` |
+| macOS，Intel 芯片 | `Agent-Wallpaper-<版本>-mac-x64.dmg` |
+
+目前的安装包还没有代码签名，第一次打开时系统会提示：
+
+- **Windows：** SmartScreen 显示“Windows 已保护你的电脑”，点“更多信息”，再点“仍要运行”。
+- **macOS：** 第一次尝试打开后，到“系统设置 → 隐私与安全性”里点“仍要打开”。（也可以运行一次 `xattr -dr com.apple.quarantine "/Applications/Agent Wallpaper.app"`。）
+
+启动后壁纸就会出现，菜单在托盘图标里（macOS 在菜单栏）。
+
+## 从源码运行
 
 ```powershell
 git clone https://github.com/HarryXin0919/agent-wallpaper.git
@@ -39,13 +50,7 @@ npm install
 npm start
 ```
 
-想让壁纸在打开 Claude 桌面端时自动出现，运行一次：
-
-```powershell
-npm run startup:add
-```
-
-不想要了就运行 `npm run startup:remove`。
+需要 Node.js 22.13 或更高版本。`npm test` 运行测试；`npm run dist:win` / `npm run dist:mac` 把安装包生成到 `dist/`。
 
 ## 设置
 
@@ -58,15 +63,15 @@ npm run startup:add
 | AI 来源 | 开关 Claude Code、Codex 和 Cursor，选每个来源的颜色，添加其他记录文件夹 |
 | 显示 | 语言、位置（自动避开图标，或固定在左 / 中 / 右）、大小、显示在哪块屏幕、同时显示几个任务、玻璃深浅、动画 |
 | 用量 | 显示或隐藏用量面板，以及其中每一项额度 |
-| 行为与提醒 | 跟随 Claude 打开和关闭、完成的任务保留多久、各类通知和额度提醒线 |
+| 行为与提醒 | 跟随 Claude 出现和隐藏、完成的任务保留多久、各类通知和额度提醒线 |
 | 隐私 | 隐私模式 |
 | 快捷键 | 每个快捷键都可以改：点一下，再按下新的组合键 |
 
-设置保存在程序文件夹里的 `.runtime/settings.json`。
+**“打开 Claude 时自动出现”：** 安装版（以及 macOS 版）会把自己设为登录时启动，在托盘里等待，Claude 桌面端打开时显示壁纸。在 Windows 上从源码运行时，改为在“启动”文件夹放一个运行 `app/watch.ps1` 的快捷方式。
 
 ## 操作
 
-单击任务栏右下角的托盘图标可以显示或隐藏壁纸，右键打开菜单。
+单击托盘图标可以显示或隐藏壁纸，右键打开菜单。
 
 | 操作 | 快捷键 |
 |---|---|
@@ -76,18 +81,20 @@ npm run startup:add
 | 隐藏文字（投屏时用） | Ctrl + Alt + Shift + H |
 | 退出 | Ctrl + Alt + Shift + Q |
 
+在 macOS 上，Ctrl 是 Control 键，Alt 是 Option 键。
+
 已完成或在等你回复的任务，卡片右上角有“×”，点一下即可收起。托盘菜单可以一次清除所有已完成的任务，也可以恢复。收起的任务有了新动作会自动重新出现。
 
-启动后看不到画面时，在托盘菜单里点“看不到画面？换一种显示方式”。不同版本的 Windows 桌面结构不同，程序会记住你选的方式。
+在 Windows 上启动后看不到画面时，在托盘菜单里点“看不到画面？换一种显示方式”。不同版本的 Windows 桌面结构不同，程序会记住你选的方式。
 
 ## 数据来源
 
 | 显示内容 | 来源 |
 |---|---|
-| Claude 任务 | `%USERPROFILE%\.claude\projects\**\*.jsonl` |
-| Codex 任务和 Codex 额度 | `%USERPROFILE%\.codex\sessions\**\rollout-*.jsonl`（Codex 每次回复都会记下当前额度） |
-| Cursor 任务（实验） | `%APPDATA%\Cursor\User\globalStorage\state.vscdb`，只读打开。Cursor 的记录里没有可靠的操作时间，所以按壁纸第一次看到的时间排列 |
-| Claude 额度 | 本机的用量服务（见下文）；没有时用 Claude 桌面端自己的记录 `%APPDATA%\Claude\plan-usage-history.json` |
+| Claude 任务 | `~/.claude/projects/**/*.jsonl` |
+| Codex 任务和 Codex 额度 | `~/.codex/sessions/**/rollout-*.jsonl`（Codex 每次回复都会记下当前额度） |
+| Cursor 任务（实验） | Cursor 的 `User/globalStorage/state.vscdb`，只读打开。Cursor 的记录里没有可靠的操作时间，所以按壁纸第一次看到的时间排列 |
+| Claude 额度 | 本机的用量服务（见下文）；没有时用 Claude 桌面端自己的记录（应用数据文件夹里的 `plan-usage-history.json`） |
 | 每个任务的 tokens、实时用量 | 从会话记录里计算 |
 
 **两次实测之间的 Claude 额度：** Claude 桌面端只在轮询时记录额度。在两次记录之间，壁纸以最近一次记录为起点，加上之后用掉的 tokens，按桌面端过去的实测记录推算出的比例换算成百分比，并在数字前标“约”。claude.ai 网页和其他电脑上的用量不在本机记录里，所以估算可能偏低。
@@ -96,11 +103,11 @@ npm run startup:add
 
 ## 原理
 
-- **放到图标下面：** 窗口作为桌面 `Progman` 窗口的分层子窗口，插在图标层（`SHELLDLL_DefView`）下面，所以图标始终在上面、照常可点。另有两种备用方式，适配其他版本的 Windows。
-- **读取图标位置：** `app/icons.ps1` 通过资源管理器的 `IFolderView` 只读地获取图标位置，`Glass.freeRect` 再找出不碰任何图标的最大矩形。
-- **点击：** 壁纸本身收不到点击。程序轮询鼠标左键和光标位置，只有当光标下正好是桌面、并且点在卡片上时才算点击，然后打开 `claude://` 或 `codex://` 链接。
+- **Windows 上的位置：** 窗口作为桌面 `Progman` 窗口的分层子窗口，插在图标层（`SHELLDLL_DefView`）下面，所以图标始终在上面、照常可点。另有两种备用方式，适配其他版本的 Windows。`app/icons.ps1` 通过资源管理器的 `IFolderView` 只读地获取图标位置，`Glass.freeRect` 再找出不碰任何图标的最大矩形。
+- **macOS 上的位置：** 窗口是桌面层级的窗口（在壁纸之上、访达图标之下），在每个桌面空间都显示。访达图标的位置不申请权限就读不到，所以按访达从右往左排列的方式估算；也可以在设置里调整面板位置。
+- **点击：** 壁纸本身收不到点击。程序轮询鼠标左键和光标位置，只有点在卡片上、并且当时桌面在最前面（macOS 上是访达为当前应用）时才算点击，然后打开 `claude://`、`codex://` 链接或 Cursor。
 - **“等你批准”是推断的：** 记录里没有权限提示。通常立刻完成的步骤超过 8 秒没有结果，或普通命令超过 40 秒没有结果，就视为在等你批准。
-- **省资源：** 所有动画由同一个每秒 15 帧的时钟驱动，不使用按屏幕刷新率运行的 CSS 动画。静止时约占一个 CPU 核心的 2%。
+- **省资源：** 所有动画由同一个每秒 15 帧的时钟驱动，不使用按屏幕刷新率运行的 CSS 动画。
 
 ## 文件
 
@@ -115,17 +122,16 @@ npm run startup:add
 | `src/glass.js`、`src/glass.css` | 毛玻璃面板 |
 | `app/main.mjs` | 托盘、快捷键、屏幕、监听记录、用量、通知、点击 |
 | `app/settings.html`、`app/settings.js` | 设置窗口 |
-| `app/desktop.mjs` | Win32：放到图标下面、鼠标、进程检测 |
-| `app/icons.ps1`、`app/watch.ps1`、`app/startup.ps1` | 图标位置；跟随 Claude 打开；开机启动快捷方式 |
-| `tools/demoframe.mjs` | 用虚构的任务渲染 `docs/screenshot.png` |
-
-`tools/` 里的预览工具用 Playwright 渲染静态画面（`npm i -D playwright-core`；Chrome 不在默认位置时设置 `CHROME` 环境变量）。
+| `app/desktop-win.mjs`、`app/desktop-mac.mjs` | 各系统上的桌面位置、鼠标、进程检测 |
+| `app/icons.ps1`、`app/watch.ps1`、`app/startup.ps1` | Windows：图标位置；从源码运行时跟随 Claude 打开 |
+| `test/` | 用虚构记录做的测试，以及启动程序并截屏的启动检查 |
+| `tools/demoframe.mjs` | 用虚构的任务渲染 README 里的图片 |
 
 **不支持：** TRAE 的对话数据库是加密的，无法读取。
 
 ## 声明
 
-Agent Wallpaper 是独立项目，与 Anthropic、OpenAI 没有关联。Claude、Claude Code 和 Codex 是其各自所有者的商标。
+Agent Wallpaper 是独立项目，与 Anthropic、OpenAI、Anysphere 没有关联。Claude、Claude Code、Codex 和 Cursor 是其各自所有者的商标。
 
 ## 许可证
 

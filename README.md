@@ -1,8 +1,8 @@
 # Agent Wallpaper
 
-**A live desktop wallpaper for Windows that shows what Claude Code, Codex and Cursor are doing.**
+**A live desktop wallpaper for Windows and macOS that shows what Claude Code, Codex and Cursor are doing.**
 
-[中文说明](README.zh-CN.md)
+[![CI](https://github.com/HarryXin0919/agent-wallpaper/actions/workflows/ci.yml/badge.svg)](https://github.com/HarryXin0919/agent-wallpaper/actions/workflows/ci.yml) [![Release](https://img.shields.io/github/v/release/HarryXin0919/agent-wallpaper)](https://github.com/HarryXin0919/agent-wallpaper/releases/latest) · [中文说明](README.zh-CN.md)
 
 ![Agent Wallpaper: a Claude Code task and a Codex task in progress, with the usage panel above](docs/screenshot-en.png)
 
@@ -18,19 +18,30 @@ It reads the session logs these assistants already keep on your computer. It nev
 - **States:** thinking, running a command, waiting for your approval, maybe stuck, done.
 - **Usage panel:** Claude's 5-hour and weekly quota, Codex's quota, tokens used today and a live tokens-per-minute figure.
 - **Click a card** to open that session in the Claude or Codex desktop app.
-- **Stays out of the way.** Panels go only into the largest empty part of the desktop (icon positions are re-read every 30 seconds). It works over Wallpaper Engine and other live wallpapers, and it pauses when a full-screen window covers the desktop.
-- **Follows the Claude app.** It can open when the Claude desktop app opens and close when it closes.
+- **Stays out of the way.** Panels go only into the largest empty part of the desktop. It works over Wallpaper Engine and other live wallpapers, and on Windows it pauses when a full-screen window covers the desktop.
+- **Follows the Claude app.** It can appear when the Claude desktop app opens and go away when it closes.
 - **Notifications** when a task finishes, when one waits for your approval, and when a quota passes your limit.
 - **Privacy mode** for screen sharing: only session titles and kinds of action, no request text, file names or commands.
 - **English or Chinese,** one screen or all of them, and adjustable size, position, glass and animation.
 
-## Requirements
+## Download
 
-- Windows 10 or 11 (it uses Win32 calls to sit behind the desktop icons)
-- Node.js 18 or later
-- Claude Code and/or Codex, used on the same computer
+Get the latest build from [Releases](https://github.com/HarryXin0919/agent-wallpaper/releases/latest):
 
-## Install
+| System | File |
+|---|---|
+| Windows 10 / 11 | `Agent-Wallpaper-Setup-<version>.exe` (installs for your user) or `Agent-Wallpaper-<version>-portable.exe` (no install) |
+| macOS, Apple silicon | `Agent-Wallpaper-<version>-mac-arm64.dmg` |
+| macOS, Intel | `Agent-Wallpaper-<version>-mac-x64.dmg` |
+
+The builds are not code-signed yet, so the first start shows a warning:
+
+- **Windows:** SmartScreen says "Windows protected your PC". Click **More info**, then **Run anyway**.
+- **macOS:** after the first attempt to open it, go to **System Settings → Privacy & Security** and click **Open Anyway**. (Or run `xattr -dr com.apple.quarantine "/Applications/Agent Wallpaper.app"` once.)
+
+After it starts, the wallpaper appears and a tray icon (menu-bar icon on macOS) gives you its menu.
+
+## Run from source
 
 ```powershell
 git clone https://github.com/HarryXin0919/agent-wallpaper.git
@@ -39,13 +50,7 @@ npm install
 npm start
 ```
 
-To open the wallpaper whenever the Claude desktop app opens, add a Startup shortcut once:
-
-```powershell
-npm run startup:add
-```
-
-`npm run startup:remove` takes it away again.
+Needs Node.js 22.13 or later. `npm test` runs the tests; `npm run dist:win` / `npm run dist:mac` build the installers into `dist/`.
 
 ## Settings
 
@@ -58,11 +63,11 @@ Right-click the tray icon and choose **Settings…** (or press Ctrl + Alt + Shif
 | AI sources | Turn Claude Code, Codex and Cursor on or off, pick each one's color, add more log folders |
 | Display | Language, position (auto avoids icons, or left / center / right), size, which screens, tasks shown at once, glass depth, animation |
 | Usage | Show or hide the usage panel and each quota |
-| Behavior & alerts | Open and close with the Claude app, how long finished tasks stay, notifications and the quota alert level |
+| Behavior & alerts | Appear with the Claude app and go away when it quits, how long finished tasks stay, notifications and the quota alert level |
 | Privacy | Privacy mode |
 | Shortcuts | Every shortcut, recorded by pressing the new keys |
 
-Settings live in `.runtime/settings.json` inside the program's folder.
+**Appear when Claude opens:** the installed program (and the macOS version) adds itself as a login item, waits in the tray, and shows the wallpaper while the Claude desktop app is open. Run from source on Windows, it adds a Startup shortcut to `app/watch.ps1` instead.
 
 ## Controls
 
@@ -76,31 +81,33 @@ The tray icon: left-click shows or hides the wallpaper; right-click opens the me
 | Hide text (for screen sharing) | Ctrl + Alt + Shift + H |
 | Quit | Ctrl + Alt + Shift + Q |
 
+On macOS, Ctrl is the Control key and Alt is Option.
+
 Finished and waiting tasks have a × to clear them; the tray menu can clear all finished tasks or bring them back. A cleared task reappears when it does something new.
 
-If the panels do not appear, the tray menu has **Can't see it? Try another placement**. Windows versions build the desktop differently, and the choice is remembered.
+If the panels do not appear on Windows, the tray menu has **Can't see it? Try another placement**. Windows versions build the desktop differently, and the choice is remembered.
 
 ## Where the data comes from
 
 | Shown | Source |
 |---|---|
-| Claude tasks | `%USERPROFILE%\.claude\projects\**\*.jsonl` |
-| Codex tasks and Codex quota | `%USERPROFILE%\.codex\sessions\**\rollout-*.jsonl` (Codex records its quota with every reply) |
-| Cursor tasks (experimental) | `%APPDATA%\Cursor\User\globalStorage\state.vscdb`, opened read-only. Cursor stores no reliable per-action times, so actions are timed by when the wallpaper first sees them |
-| Claude quota | A local usage service if one is running (below); otherwise the Claude desktop app's own record, `%APPDATA%\Claude\plan-usage-history.json` |
+| Claude tasks | `~/.claude/projects/**/*.jsonl` |
+| Codex tasks and Codex quota | `~/.codex/sessions/**/rollout-*.jsonl` (Codex records its quota with every reply) |
+| Cursor tasks (experimental) | Cursor's `User/globalStorage/state.vscdb`, opened read-only. Cursor stores no reliable per-action times, so actions are timed by when the wallpaper first sees them |
+| Claude quota | A local usage service if one is running (below); otherwise the Claude desktop app's own record, `plan-usage-history.json` in its app-data folder |
 | Tokens per task, live rate | Counted from the logs |
 
-**Claude quota between readings.** The Claude desktop app records your quota only while it polls. Between its readings, Agent Wallpaper adds the tokens used since the last reading, converted with the ratio it learns from the app's past readings against the same logs. Those figures are prefixed with 约 ("about"). Usage from claude.ai or other computers is not in the local logs, so the estimate can run low.
+**Claude quota between readings.** The Claude desktop app records your quota only while it polls. Between its readings, Agent Wallpaper adds the tokens used since the last reading, converted with the ratio it learns from the app's past readings against the same logs. Those figures are prefixed with "~". Usage from claude.ai or other computers is not in the local logs, so the estimate can run low.
 
 **Exact Claude quota (optional).** For exact figures, run a local service that answers `GET http://127.0.0.1:8787/usage` with JSON like `{"ok": true, "session_pct": 21, "week_pct": 70, "session_reset_s": 10600, "week_reset_s": 93000, "tok_today": 182000000, "cost_today_usd": 96, "tok_7d": [...]}`. The proxy from [ClaudeOrb](https://github.com/HarryXin0919/ClaudeOrb) serves exactly this, using your Claude Code login. This is the only thing the program reads over the network, and it is a local address.
 
 ## How it works
 
-- **Placement.** The window is a layered child of the desktop's `Progman` window, placed below the icon view (`SHELLDLL_DefView`), so icons stay on top and clickable. Two fallback placements cover other Windows builds.
-- **Icons.** `app/icons.ps1` reads icon positions through the shell's `IFolderView` (read-only). `Glass.freeRect` finds the largest rectangle no icon touches.
-- **Clicks.** The wallpaper cannot receive clicks. The program polls the mouse button and cursor, and only counts a click when the desktop itself is under the cursor and the click lands on a card. It opens `claude://` or `codex://` links.
+- **Windows placement.** The window is a layered child of the desktop's `Progman` window, placed below the icon view (`SHELLDLL_DefView`), so icons stay on top and clickable. Two fallback placements cover other Windows builds. `app/icons.ps1` reads icon positions through the shell's `IFolderView` (read-only), and `Glass.freeRect` finds the largest rectangle no icon touches.
+- **macOS placement.** The window is a desktop-level window (above the wallpaper, below Finder's icons) on every Space. Finder's icon positions cannot be read without asking for permission, so they are estimated (Finder fills columns from the right); the Position setting can move the panels.
+- **Clicks.** The wallpaper cannot receive clicks. The program polls the mouse button and cursor, and only counts a click when it lands on a card while the desktop is in front (on macOS: while Finder is the frontmost app). It opens `claude://`, `codex://` or the Cursor app.
 - **Approval waits** are inferred: logs do not record permission prompts, so a normally instant step pending for over 8 s, or a short command pending for over 40 s, counts as waiting for you.
-- **Light on resources.** Every animation runs off one 15 fps clock that sets CSS variables, instead of CSS animations at the screen's refresh rate. It uses about 2% of a CPU core at rest.
+- **Light on resources.** Every animation runs off one 15 fps clock that sets CSS variables, instead of CSS animations at the screen's refresh rate.
 
 ## Project layout
 
@@ -115,17 +122,16 @@ If the panels do not appear, the tray menu has **Can't see it? Try another place
 | `src/glass.js`, `src/glass.css` | The panels |
 | `app/main.mjs` | Tray, shortcuts, screens, log watching, usage, notifications, clicks |
 | `app/settings.html`, `app/settings.js` | The settings window |
-| `app/desktop.mjs` | Win32: placement behind the icons, mouse, process checks |
-| `app/icons.ps1`, `app/watch.ps1`, `app/startup.ps1` | Icon positions; open with Claude; Startup shortcut |
-| `tools/demoframe.mjs` | Renders `docs/screenshot.png` from made-up tasks |
-
-The preview tools in `tools/` render still frames with Playwright (`npm i -D playwright-core`; set `CHROME` if Chrome is not in its default place).
+| `app/desktop-win.mjs`, `app/desktop-mac.mjs` | Placement on the desktop, mouse, process checks, per system |
+| `app/icons.ps1`, `app/watch.ps1`, `app/startup.ps1` | Windows: icon positions; open with Claude when run from source |
+| `test/` | Tests on made-up logs, and a launch check that starts the app and captures the screen |
+| `tools/demoframe.mjs` | Renders the README images from made-up tasks |
 
 **Not supported:** TRAE encrypts its conversation database, so it cannot be read.
 
 ## Not affiliated
 
-Agent Wallpaper is an independent project. It is not made by or affiliated with Anthropic or OpenAI. Claude, Claude Code and Codex are trademarks of their owners.
+Agent Wallpaper is an independent project. It is not made by or affiliated with Anthropic, OpenAI or Anysphere. Claude, Claude Code, Codex and Cursor are trademarks of their owners.
 
 ## License
 

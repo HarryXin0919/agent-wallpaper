@@ -17,7 +17,8 @@ const electron = createRequire(import.meta.url)('electron');
 const env = { ...process.env, WALL_TEST: path.join(tmp, 'user'), WALL_ROOT: P.claude, WALL_CODEX: P.codex, WALL_CURSOR: P.cursor,
   WALL_CAPTURE: out, WALL_CAPTURE_AFTER: '9000', WALL_EXIT: '1', WALL_NOFOLLOW: '1', WALL_UNCOVERED: '1', WALL_LOG: '1' };
 delete env.ELECTRON_RUN_AS_NODE;
-const child = spawn(electron, [root], { env, stdio: ['ignore', 'pipe', 'pipe'] });
+// LAUNCH_EXE: check a packaged build instead of the source folder
+const child = process.env.LAUNCH_EXE ? spawn(process.env.LAUNCH_EXE, [], { env, stdio: ['ignore', 'pipe', 'pipe'] }) : spawn(electron, [root], { env, stdio: ['ignore', 'pipe', 'pipe'] });
 let log = '';
 child.stdout.on('data', (b) => { log += b; }); child.stderr.on('data', (b) => { log += b; });
 const timer = setTimeout(() => { child.kill(); }, 60000);

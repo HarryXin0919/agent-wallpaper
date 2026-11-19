@@ -1,7 +1,7 @@
 {
   "name": "agent-wallpaper",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "A live desktop wallpaper for Windows and macOS that shows what Claude Code, Codex and Cursor are doing, read from their local session logs.",
   "license": "MIT",
   "author": "Harry Alexander Xin",
@@ -37,10 +37,10 @@
     "dist:mac": "electron-builder --mac"
   },
   "dependencies": {
-    "electron": "45.3.4",
     "koffi": "3.3.8"
   },
   "devDependencies": {
+    "electron": "45.3.4",
     "electron-builder": "^26.18.0"
   },
   "build": {
@@ -115,7 +115,8 @@
     "publish": {
       "provider": "github",
       "owner": "HarryXin0919",
-      "repo": "agent-wallpaper"
+      "repo": "agent-wallpaper",
+      "releaseType": "release"
     }
   }
 }
