@@ -439,7 +439,7 @@ function openSettings() {
 // the switch shows what is really set up (a login item or a Startup shortcut), not only what was last chosen
 const followOpenNow = () => { try { return FOLLOW_IN_APP ? app.getLoginItemSettings().openAtLogin : LINKS.some((n) => fs.existsSync(path.join(STARTUP, n))); } catch { return cfg.follow.open; } };
 const cfgView = () => ({ ...cfg, follow: { ...cfg.follow, open: followOpenNow() }, exactApproval: hooks.installed() });
-ipcMain.handle('cfg:get', () => ({ cfg: cfgView(), lang: I18N.lang, info: sourceInfo(), displays: displayInfo(), keysOk, version: app.getVersion() }));
+ipcMain.handle('cfg:get', () => ({ cfg: cfgView(), lang: I18N.lang, info: sourceInfo(), displays: displayInfo(), keysOk, version: app.getVersion(), platform: process.platform }));
 ipcMain.handle('cfg:set', (_e, patch) => { const prev = cfg; cfg = S.apply(cfg, patch); if (patch && patch.follow && typeof patch.follow.open === 'boolean') startupShortcut(patch.follow.open);
   // the approval hook: added to or removed from Claude Code's settings only when this switch is changed
   if (patch && typeof patch.exactApproval === 'boolean') { try { patch.exactApproval ? hooks.install() : hooks.uninstall(); } catch (e) { log('hook change failed', String(e)); } cfg = S.apply(cfg, { exactApproval: hooks.installed() }); } S.save(SETTINGS, cfg); applyCfg(prev); return { cfg: cfgView(), lang: I18N.lang, info: sourceInfo(), displays: displayInfo(), keysOk }; });

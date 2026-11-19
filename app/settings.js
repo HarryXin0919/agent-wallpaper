@@ -5,7 +5,24 @@
     ai: 'AI 来源', aiLead: '壁纸读取这些 AI 在本机写下的会话记录。每个来源有自己的颜色，面板顶边和名称标签用这个颜色。',
     found: '已找到', notFound: '没有找到', today: (n) => `今天 ${n} 个会话`, exp: '实验', custom: '自定义文件夹',
     addFolder: '添加文件夹', addHint: '另一个 Claude Code 或 Codex 的记录位置，比如 WSL 里的，或第二个账号的',
-    notLogs: '这个文件夹里没有找到 Claude Code（projects）或 Codex（sessions）的记录。',
+    notLogs: '这个文件夹里没有找到 Claude Code（projects）或 Codex（sessions）的记录。请对照下面的指南检查所选的文件夹。',
+    guide: '怎么添加？', guideHide: '收起指南',
+    guideLead: 'Claude Code、Codex、Gemini CLI 和 Cursor 的默认记录位置会自动读取，无需添加。只有记录存放在其他位置时才需要手动添加，例如装在 WSL 里，或通过环境变量改过存放位置。目前可以添加的是 Claude Code 和 Codex 的记录。',
+    steps: (mac) => [
+      ['确定记录所在的文件夹', 'Claude Code 的记录在 .claude 文件夹中（内含 projects 子文件夹），Codex 的记录在 .codex 文件夹中（内含 sessions 子文件夹）。常见位置：', true],
+      ['点击上方的“添加文件夹”，选中该文件夹', mac
+        ? '在选择窗口中按 ⌘⇧G 可直接输入路径。以“.”开头的文件夹默认隐藏，按 ⌘⇧. 即可显示。选 .claude、.codex 本身，或其中的 projects、sessions 均可。'
+        : '可以在选择窗口顶部的地址栏直接输入路径，按回车进入。选 .claude、.codex 本身，或其中的 projects、sessions 均可。'],
+      ['确认识别结果', '添加后列表中会新增一项，并标明是 Claude Code 还是 Codex。显示“已找到”和今天的会话数，即表示读取正常。若提示没有找到记录，通常是选错了层级，请改选上一级或下一级文件夹。'],
+      ['按需调整', '点击名称可以重命名，右侧可以更换颜色或暂时关闭，点击 × 删除。删除只是不再读取，不会改动该文件夹中的任何文件。'],
+    ],
+    places: (mac) => [
+      ...(mac ? [] : [['WSL 中的 Claude Code', '\\\\wsl$\\Ubuntu\\home\\用户名\\.claude'], ['WSL 中的 Codex', '\\\\wsl$\\Ubuntu\\home\\用户名\\.codex']]),
+      ['改过位置的 Claude Code', '环境变量 CLAUDE_CONFIG_DIR 指向的文件夹'],
+      ['改过位置的 Codex', '环境变量 CODEX_HOME 指向的文件夹'],
+      ['从其他电脑复制或同步来的记录', '复制过来的 .claude 或 .codex 文件夹'],
+    ],
+    wslNote: '其中 Ubuntu 换成你的 WSL 发行版名称，用户名换成 WSL 中的用户名。读取时 WSL 需要处于运行状态。',
     cursorNote: 'Cursor 的记录里没有可靠的时间，操作按壁纸第一次看到它们的时间排列。TRAE 的对话记录是加密的，无法读取，所以不支持。',
     look: '显示', lookLead: '改动会立即出现在壁纸上。',
     lang: '语言', langS: '界面文字的语言', auto: '跟随系统',
@@ -38,7 +55,24 @@
     ai: 'AI sources', aiLead: 'The wallpaper reads the session logs these assistants keep on this computer. Each source has its own color, used for the top edge of its panels and its name tag.',
     found: 'Found', notFound: 'Not found', today: (n) => `${n} session${n === 1 ? "" : "s"} today`, exp: 'Experimental', custom: 'Custom folder',
     addFolder: 'Add a folder', addHint: 'Another Claude Code or Codex log location, such as one inside WSL or a second account',
-    notLogs: 'No Claude Code (projects) or Codex (sessions) logs were found in this folder.',
+    notLogs: 'No Claude Code (projects) or Codex (sessions) logs were found in this folder. Check the folder against the guide below.',
+    guide: 'How to add one', guideHide: 'Hide the guide',
+    guideLead: 'The usual log locations of Claude Code, Codex, Gemini CLI and Cursor are read automatically and need no adding. Add a folder only when logs are kept somewhere else, for example inside WSL, or moved with an environment variable. Claude Code and Codex logs can be added.',
+    steps: (mac) => [
+      ['Find the folder with the logs', 'Claude Code keeps its logs in a .claude folder (with a projects folder inside); Codex in a .codex folder (with a sessions folder inside). Common places:', true],
+      ['Click "Add a folder" above and choose it', mac
+        ? 'In the dialog, press ⌘⇧G to type a path. Folders starting with "." are hidden; press ⌘⇧. to show them. Choosing .claude or .codex itself, or the projects or sessions folder inside, both work.'
+        : 'You can type a path into the address bar at the top of the dialog and press Enter. Choosing .claude or .codex itself, or the projects or sessions folder inside, both work.'],
+      ['Check what was found', 'A new entry appears in the list, marked Claude Code or Codex. "Found" with today\'s session count means it is being read. If no logs were found, a folder one level up or down is usually the right one.'],
+      ['Adjust as you like', 'Click the name to rename it; on the right, change its color, turn it off for now, or remove it with ×. Removing only stops reading it; nothing in that folder is changed.'],
+    ],
+    places: (mac) => [
+      ...(mac ? [] : [['Claude Code inside WSL', '\\\\wsl$\\Ubuntu\\home\\username\\.claude'], ['Codex inside WSL', '\\\\wsl$\\Ubuntu\\home\\username\\.codex']]),
+      ['Claude Code in a moved location', 'the folder set by the CLAUDE_CONFIG_DIR environment variable'],
+      ['Codex in a moved location', 'the folder set by the CODEX_HOME environment variable'],
+      ['Logs copied or synced from another computer', 'the copied .claude or .codex folder'],
+    ],
+    wslNote: 'Replace Ubuntu with the name of your WSL distribution and username with your user name inside WSL. WSL needs to be running while the wallpaper reads it.',
     cursorNote: "Cursor's records carry no reliable times, so actions are ordered by when the wallpaper first sees them. TRAE encrypts its conversations, so it cannot be supported.",
     look: 'Display', lookLead: 'Changes show on the wallpaper right away.',
     lang: 'Language', langS: 'Language of the on-screen text', auto: 'System',
@@ -67,7 +101,7 @@
     press: 'Press a combination…', version: (v) => `Version ${v}`,
   };
   const COLORS = ['#f4a98c', '#8fc1ff', '#b9a2ff', '#9fe6d2', '#ffd27a', '#ff9fb8'];
-  let S = null, tab = 'ai', T = ZH, msg = '', recording = null;
+  let S = null, tab = 'ai', T = ZH, msg = '', recording = null, guideOpen = false;
   const $ = (h) => { const d = document.createElement('div'); d.innerHTML = h.trim(); return d.firstChild; };
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -91,7 +125,15 @@
     return `<section><h1>${esc(T.ai)}</h1><div class="lead">${esc(T.aiLead)}</div>
       ${one('claude', 'Claude Code')}${one('codex', 'Codex')}${one('gemini', 'Gemini CLI')}${one('cursor', 'Cursor', `<span class="chip">${esc(T.exp)}</span>`)}${customs}
       <button class="add" id="add"><b>＋</b><span>${esc(T.addFolder)} — ${esc(T.addHint)}</span></button>
-      <div class="msg">${esc(msg)}</div><div class="note">${esc(T.cursorNote)}</div></section>`;
+      <div class="msg">${esc(msg)}</div>
+      <button class="link" id="guide">${esc(guideOpen ? T.guideHide : T.guide)}</button>${guideOpen ? guide() : ''}
+      <div class="note">${esc(T.cursorNote)}</div></section>`;
+  }
+  // step-by-step help for adding a folder (opens by itself when a chosen folder had no logs)
+  function guide() {
+    const mac = S.platform === 'darwin';
+    const places = `<table class="places">${T.places(mac).map(([w, p]) => `<tr><td>${esc(w)}</td><td>${/^[\\/~]/.test(p) ? `<code>${esc(p)}</code>` : esc(p)}</td></tr>`).join('')}</table>${mac ? '' : `<div class="s">${esc(T.wslNote)}</div>`}`;
+    return `<div class="guide"><p>${esc(T.guideLead)}</p><ol>${T.steps(mac).map(([h, d, withPlaces], i) => `<li><span class="num">${i + 1}</span><div><b>${esc(h)}</b><div class="s">${esc(d)}</div>${withPlaces ? places : ''}</div></li>`).join('')}</ol></div>`;
   }
   function look() {
     const c = S.cfg;
@@ -164,9 +206,10 @@
     if (b.dataset.del) { const list = S.cfg.custom.filter((_, i) => i !== +b.dataset.del); return set({ custom: list }); }
     if (b.dataset.key) { recording = recording === b.dataset.key ? null : b.dataset.key; draw(); return; }
     if (b.id === 'test') return window.cfg.testNotify();
+    if (b.id === 'guide') { guideOpen = !guideOpen; draw(); return; }
     if (b.id === 'add') {
       const r = await window.cfg.pickFolder(); if (!r) return;
-      if (!r.kind) { msg = T.notLogs; draw(); return; }
+      if (!r.kind) { msg = T.notLogs; guideOpen = true; draw(); return; }
       msg = '';
       const n = S.cfg.custom.length + 1, used = new Set([S.cfg.sources.claude.color, S.cfg.sources.codex.color, S.cfg.sources.cursor.color, S.cfg.sources.gemini.color, ...S.cfg.custom.map((x) => x.color)]);
       const color = COLORS.find((c) => !used.has(c)) || COLORS[n % COLORS.length];
