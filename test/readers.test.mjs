@@ -119,6 +119,33 @@ test('DeepSeek Harness: a frame still being written is read on the next look', (
   assert.equal(first.lines.length + rest.lines.length, deepseekLog(NOW).flat().length);
 });
 
+test('Progress: continuous with a task list, inferred stages without one', () => {
+  const t0 = NOW - 600e3;
+  const plan = (s) => s.map((x, i) => ({ text: 'step ' + (i + 1), status: x }));
+  const tool = (t, kind, extra) => ({ t, tEnd: t + 1000, k: 'tool', kind, op: kind === 'edit' ? '修改 a.js' : kind === 'run' ? '运行：npm test' : '读取 a.js', id: 'x' + t, ...extra });
+  // 4 steps, 1 done (took 2 minutes), the second has run 1 minute: between 25% and 50%, and it grows with time
+  const ev = [{ t: t0, k: 'prompt' }, { t: t0 + 1000, k: 'tool', kind: 'plan', op: '更新任务清单', plan: plan(['in_progress', 'pending', 'pending', 'pending']), id: 'p1', tEnd: t0 + 1000 },
+    tool(t0 + 20e3, 'read'), tool(t0 + 100e3, 'edit'),
+    { t: t0 + 121e3, k: 'tool', kind: 'plan', op: '更新任务清单', plan: plan(['completed', 'in_progress', 'pending', 'pending']), id: 'p2', tEnd: t0 + 121e3 },
+    { t: t0 + 150e3, k: 'tool', kind: 'read', op: '读取 b.js', id: 'r2' }];
+  const task = { t0, ev };
+  const a = Flow.progress(task, t0 + 181e3).pct, b = Flow.progress(task, t0 + 400e3).pct;
+  assert.ok(a > 25 && a < 50, `in step 2: ${a}`);
+  assert.ok(b > a && b < 50, 'grows with time but stays inside the step');
+  // no task list: look around → change files → run checks, only forward; done = 100
+  const plain = { t0, ev: [{ t: t0, k: 'prompt' }, tool(t0 + 10e3, 'read'), tool(t0 + 20e3, 'read')] };
+  const p0 = Flow.progress(plain, t0 + 30e3);
+  assert.equal(p0.stage, 0); assert.ok(p0.pct > 0 && p0.pct < 35);
+  plain.ev.push(tool(t0 + 40e3, 'edit'), tool(t0 + 50e3, 'read'));
+  const p1 = Flow.progress(plain, t0 + 60e3);
+  assert.equal(p1.stage, 1, 'reading after an edit does not go back'); assert.ok(p1.pct >= 35 && p1.pct < 75);
+  plain.ev.push({ t: t0 + 70e3, k: 'tool', kind: 'run', op: '运行：npm test', id: 'run1' });
+  const p2 = Flow.progress(plain, t0 + 80e3);
+  assert.equal(p2.stage, 2); assert.ok(p2.pct >= 75 && p2.pct < 95);
+  plain.ev[plain.ev.length - 1].tEnd = t0 + 90e3; plain.ev.push({ t: t0 + 95e3, k: 'stop' });
+  assert.equal(Flow.progress(plain, t0 + 100e3).pct, 100);
+});
+
 test('Flow groups actions under the plan steps', () => {
   const L = new Live(P.claude, { hours: 12 }); L.scan(); L.poll();
   const s = L.snapshot().find((x) => x.title === 'Dark mode');

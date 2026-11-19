@@ -43,6 +43,9 @@
     exact: '准确识别“等你批准”', exactS: '在 Claude Code 的设置（~/.claude/settings.json）里加一个通知钩子：Claude 弹出权限提示时，记一行到 ~/.claude/agent-wallpaper/events.jsonl。不打开时，按“步骤超过 8 秒、命令超过 40 秒没结果”推断。关掉时会删掉这个钩子。',
     nDone: '任务完成时通知', nApprove: '等你批准时通知', nQuota: '额度快用完时通知', nQuotaS: '每个额度周期只提醒一次',
     nAt: '提醒线', test: '发送测试通知',
+    upd: '自动检查更新', updS: '每 6 小时到 GitHub 查一次新版本。安装版会在后台下载，退出时自动安装；免安装版和 macOS 版只提醒你去下载。',
+    updNow: '立即检查', updInstall: (v) => `重启并更新到 ${v}`, updGet: (v) => `下载 ${v}`,
+    updSt: { source: '从源码运行时不检查更新', idle: '', checking: '正在检查…', latest: '已是最新版本', error: '检查失败，稍后会再试', available: (v) => `新版本 ${v} 已发布`, downloading: (v, p) => `正在下载 ${v}（${p}%）`, ready: (v) => `${v} 已下载，退出时安装` },
     privacy: '隐私', privacyLead: '投屏、录屏或别人能看到你的屏幕时使用。',
     priv: '隐私模式', privS: '只显示会话标题和操作类型（读取文件、运行命令……），不显示你的提问原文、文件名、命令和回复内容',
     privNote: '只想临时隐藏所有文字时，用“隐藏文字”快捷键。',
@@ -93,6 +96,9 @@
     exact: 'Exact "waiting for your approval"', exactS: 'Adds a notification hook to Claude Code\'s settings (~/.claude/settings.json): when Claude shows a permission prompt, one line goes to ~/.claude/agent-wallpaper/events.jsonl. Without it, approval waits are inferred (a step pending over 8 s, a command over 40 s). Turning it off removes the hook.',
     nDone: 'Notify when a task finishes', nApprove: 'Notify when approval is needed', nQuota: 'Notify when a quota runs low', nQuotaS: 'Once per quota period',
     nAt: 'Alert at', test: 'Send a test notification',
+    upd: 'Check for updates automatically', updS: 'Looks for a new version on GitHub every 6 hours. The installed build downloads it in the background and installs it when the program quits; the portable and macOS builds only tell you to download it.',
+    updNow: 'Check now', updInstall: (v) => `Restart to update to ${v}`, updGet: (v) => `Download ${v}`,
+    updSt: { source: 'No update checks when run from source', idle: '', checking: 'Checking…', latest: 'Up to date', error: 'Check failed; it will try again later', available: (v) => `Version ${v} is out`, downloading: (v, p) => `Downloading ${v} (${p}%)`, ready: (v) => `${v} is downloaded and installs on quit` },
     privacy: 'Privacy', privacyLead: 'For screen sharing, recording, or when others can see your screen.',
     priv: 'Privacy mode', privS: 'Shows only session titles and kinds of action (read a file, run a command…): no request text, file names, commands or replies',
     privNote: 'To hide all text for a moment, use the "hide text" shortcut.',
@@ -165,7 +171,15 @@
       <div class="box">${row(T.exact, T.exactS, sw('exactApproval', c.exactApproval))}</div>
       <div class="box">${row(T.nDone, '', sw('notify.done', n.done))}${row(T.nApprove, '', sw('notify.approval', n.approval))}${row(T.nQuota, T.nQuotaS, sw('notify.quota', n.quota))}
         ${row(T.nAt, '', seg('notify.quotaAt', { 70: '70%', 80: '80%', 90: '90%' }, n.quotaAt))}
-        <div class="row"><div class="l"></div><button class="btn" id="test">${esc(T.test)}</button></div></div></section>`;
+        <div class="row"><div class="l"></div><button class="btn" id="test">${esc(T.test)}</button></div></div>
+      <div class="box">${row(T.upd, T.updS, sw('updates.check', c.updates.check))}${updRow()}</div></section>`;
+  }
+  // where the update stands, with the one button that fits
+  function updRow() {
+    const u = S.update || { status: 'source' }, st = T.updSt[u.status];
+    const label = typeof st === 'function' ? st(u.version, u.percent) : st || '';
+    const btn = u.status === 'ready' ? `<button class="btn" id="updInstall">${esc(T.updInstall(u.version))}</button>` : u.status === 'available' ? `<button class="btn" id="updGet">${esc(T.updGet(u.version))}</button>` : u.status === 'source' ? '' : `<button class="btn" id="updNow"${['checking', 'downloading'].includes(u.status) ? ' disabled' : ''}>${esc(T.updNow)}</button>`;
+    return `<div class="row"><div class="l"><span>${esc(T.version(u.current || S.version))}${label ? ' · ' + esc(label) : ''}</span></div>${btn}</div>`;
   }
   function privacy() {
     return `<section><h1>${esc(T.privacy)}</h1><div class="lead">${esc(T.privacyLead)}</div>
@@ -206,6 +220,9 @@
     if (b.dataset.del) { const list = S.cfg.custom.filter((_, i) => i !== +b.dataset.del); return set({ custom: list }); }
     if (b.dataset.key) { recording = recording === b.dataset.key ? null : b.dataset.key; draw(); return; }
     if (b.id === 'test') return window.cfg.testNotify();
+    if (b.id === 'updNow') return window.cfg.checkUpdate();
+    if (b.id === 'updInstall') return window.cfg.installUpdate();
+    if (b.id === 'updGet') return window.cfg.openReleases();
     if (b.id === 'guide') { guideOpen = !guideOpen; draw(); return; }
     if (b.id === 'add') {
       const r = await window.cfg.pickFolder(); if (!r) return;
@@ -234,5 +251,6 @@
     const name = recording; recording = null;
     set({ keys: { [name]: [...mods, key].join('+') } });
   });
-  window.cfg.get().then((s) => { S = s; draw(); });
+  window.cfg.onUpdate((u) => { if (!S) return; S.update = u; if (tab === 'behave') draw(); });
+  window.cfg.get().then(async (s) => { S = s; S.update = await window.cfg.update(); draw(); });
 })();

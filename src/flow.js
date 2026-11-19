@@ -69,7 +69,50 @@
     return { task, st, live, steps: all.filter((s) => s.ops.length || (s !== pre && s !== tail)), active, plan, now, title: /^(Task|Background) \(from the session/.test(task.prompt || '') && task.title ? task.title : strip(task.prompt) || task.title || '' };
   }
 
-  // --- drawing helpers -----------------------------------------------------------------------
+  // --- progress: how far along the task is, 0–100, continuous ----------------------------------
+  // With a task list: finished steps count whole; the current step is credited by how long it has run and how many
+  // actions it has had, compared with the finished steps. It approaches the next step but never reaches it on its own.
+  // Without a task list: the stage is inferred from the actions (look around → change files → run checks) and only
+  // moves forward; within a stage, each action and each minute covers part of what is left of it.
+  const STAGE_AT = [0, 35, 75, 95]; // where each inferred stage begins; the last value is where checks end
+  const ease = (x) => 1 - Math.exp(-x);
+  function progress(task, now, m) {
+    m = m || model(task, now);
+    const st = m.st, plan = m.plan;
+    const ended = st.kind === 'done' || (st.kind === 'wait' && !st.approval);
+    if (plan && plan.length) {
+      const n = plan.length, done = plan.filter((p) => p.status === 'completed').length;
+      const cur = plan.findIndex((p) => p.status === 'in_progress');
+      let since = null;
+      if (cur >= 0) for (const e of task.ev) if (e.t <= now && e.plan && e.plan[cur] && e.plan[cur].status === 'in_progress') { since = e.t; break; }
+      if (done === n) return { pct: 100, plan: true, n, done, cur: -1, since: null };
+      let part = 0;
+      if (cur >= 0 && !ended) {
+        const fin = m.steps.filter((s) => s.i >= 0 && s.i < n && s.status === 'completed' && s.t0 != null && s.t1 != null);
+        const avgD = fin.length ? Math.max(30e3, fin.reduce((a, s) => a + (s.t1 - s.t0), 0) / fin.length) : 150e3;
+        const avgO = fin.length ? Math.max(2, fin.reduce((a, s) => a + s.ops.length, 0) / fin.length) : 4;
+        const step = m.steps.find((s) => s.i === cur);
+        const elapsed = now - (since || (step && step.t0) || task.t0), ops = step ? step.ops.filter((o) => !o.live || o.e).length : 0;
+        part = 0.9 * ease(1.2 * (0.5 * elapsed / avgD + 0.5 * ops / avgO));
+      }
+      return { pct: Math.min(99, ((done + part) / n) * 100), plan: true, n, done, cur, since };
+    }
+    // no task list: infer the stage
+    let stage = 0, edited = false, ops = 0, t0 = task.t0;
+    for (const e of task.ev) {
+      if (e.t > now || e.k !== 'tool' || !e.op || SKIP.test(e.op)) continue;
+      let s = stage;
+      if (e.kind === 'edit') { s = Math.max(stage, 1); edited = true; }
+      else if (e.kind === 'run' && edited) s = Math.max(stage, 2);
+      if (s > stage) { stage = s; ops = 0; t0 = e.t; }
+      ops++;
+    }
+    if (ended) return { pct: 100, plan: false, stage, n: 3 };
+    const a = STAGE_AT[stage], b = STAGE_AT[stage + 1];
+    const pct = a + (b - a) * 0.9 * ease(0.25 * ops + (now - t0) / 240e3);
+    return { pct, plan: false, stage, n: 3, since: t0 };
+  }
+  progress.STAGE_AT = STAGE_AT;
 
-  root.Flow = { model };
+  root.Flow = { model, progress };
 })(typeof window !== 'undefined' ? window : globalThis);

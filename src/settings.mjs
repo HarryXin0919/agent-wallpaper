@@ -21,6 +21,7 @@ export const DEFAULTS = {
   glass: 'auto',       // auto | dark | light
   motion: 'full',      // full | reduced | off
   privacy: false,      // only titles and kinds of action: no request text, file names or commands
+  updates: { check: true }, // check GitHub Releases for a new version (the installed Windows build also downloads it)
   exactApproval: false, // a Claude Code hook reports permission prompts (adds one hook to ~/.claude/settings.json)
   usage: { show: true, h5: true, week: true, codex: true, warm: 80, hot: 95 },
   notify: { done: true, approval: true, quota: true, quotaAt: 80 },

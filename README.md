@@ -8,12 +8,12 @@
 
 Agent Wallpaper sits behind your desktop icons and draws each running task as frosted-glass panels: the request, the task's step-by-step plan as a progress bar, and the latest actions it took (files read, edits with lines added and removed, commands run, time spent thinking). Above them, a usage panel shows how much of your Claude and Codex plan quota is left.
 
-It reads the session logs these assistants already keep on your computer and never changes them. It changes nothing else on your system unless you turn on an option that says what it changes (see [Privacy and system changes](#privacy-and-system-changes)), and it sends nothing over the network.
+It reads the session logs these assistants already keep on your computer and never changes them. It changes nothing else on your system unless you turn on an option that says what it changes (see [Privacy and system changes](#privacy-and-system-changes)), and it sends nothing about you over the network (it only asks GitHub whether a new version is out).
 
 ## Features
 
 - **Claude Code, Codex, Gemini CLI, DeepSeek Harness and Cursor side by side.** Each source has its own color (Claude coral, Codex blue by default). When several tasks run at once, each gets its own lane. Extra log folders (a second account, Claude Code inside WSL) can be added.
-- **Progress you can read at a glance.** The plan the agent keeps (Claude's task list, Codex's plan) becomes a progress bar with the current step and how long it has taken.
+- **Progress you can read at a glance.** Every task gets a continuous progress bar with a percentage. When the agent keeps a plan (Claude's task list, Codex's plan, Gemini and DeepSeek todos), finished steps count in full and the current step is credited by how long it has run and how many actions it has had, compared with the steps already done. When there is no plan, the stage is inferred from the actions (looking around, changing files, running checks) and marked as inferred. Several tasks at once keep the order in which they began.
 - **Every action as a card.** Reads, searches, edits (+/− lines), commands, subagents, web lookups and thinking time, newest last; the running one glows.
 - **States:** thinking, running a command, waiting for your approval, maybe stuck, done. Approval waits can be reported exactly by an optional Claude Code hook (below).
 - **Usage panel:** Claude's 5-hour and weekly quota, Codex's quota, tokens used today and a live tokens-per-minute figure.
@@ -40,6 +40,8 @@ The builds are not code-signed yet, so the first start shows a warning:
 - **macOS:** after the first attempt to open it, go to **System Settings → Privacy & Security** and click **Open Anyway**. (Or run `xattr -dr com.apple.quarantine "/Applications/Agent Wallpaper.app"` once.)
 
 After it starts, the wallpaper appears and a tray icon (menu-bar icon on macOS) gives you its menu.
+
+**Updates.** Every 6 hours the program checks GitHub Releases for a new version. The installed Windows build downloads it in the background and installs it when you quit (or at once with **Restart to update** in the tray menu). The portable build and the macOS build tell you a new version is out and open the download page. Turn this off in Settings → Behavior & alerts.
 
 ## Run from source
 
@@ -136,7 +138,10 @@ If the panels do not appear on Windows, the tray menu has **Can't see it? Try an
 
 ## Privacy and system changes
 
-This program does not transfer any information to other networked systems. Everything it shows is read from files on your own computer; the only address it contacts is `127.0.0.1:8787`, and only if you run the optional local usage service described above.
+This program does not transfer any information about you or your work to other networked systems. Everything it shows is read from files on your own computer. It contacts only:
+
+- `github.com`, to check for and download new versions of itself (every 6 hours; can be turned off in the settings). These are ordinary requests for the release files and carry no data from your computer.
+- `127.0.0.1:8787`, on your own computer, and only if you run the optional local usage service described above.
 
 It changes your system only through these options, each explained next to its switch in the settings:
 

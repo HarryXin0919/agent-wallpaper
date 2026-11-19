@@ -98,7 +98,7 @@
     // lay out inside the largest empty part of the desktop: a wide area gets a strip, a narrow one a column
     const free = opts.free || { x: 110, y: 40, w: (opts.w || 1707) - 220, h: (opts.h || 1067) - 140 };
     const vertical = free.w < 1250, n = (m.plan || []).length;
-    const others = (opts.others || []).slice(0, vertical ? 3 : 2);
+    const others = (opts.others || []).slice(0, vertical ? 3 : 2).sort(byStart);
     const maxCards = opts.maxCards || (vertical ? clampN(Math.floor((free.h - 360 - others.length * 74) / 92), 2, 7) : 5);
     const shown = all.slice(-maxCards), hidden = all.length - shown.length;
     const parts = [];
@@ -117,23 +117,29 @@
   }
 
   // the progress bar and step line shared by the full view and the lanes
+  // The fill is a continuous percentage (Flow.progress); a marker sits at the end of each step of the task list, or
+  // of each inferred stage when there is no list.
   function progress(task, m, now, scls) {
-    const l = L(), st = m.st, plan = m.plan || [];
-    const n = plan.length, done = plan.filter((p) => p.status === 'completed').length;
-    const cur = plan.findIndex((p) => p.status === 'in_progress');
-    let since = null;
-    if (cur >= 0) for (const e of task.ev) if (e.t <= now && e.plan && e.plan[cur] && e.plan[cur].status === 'in_progress') { since = e.t; break; }
-    const nodes = plan.map((p, i) => {
-      const left = n > 1 ? (i / (n - 1)) * 100 : 50;
-      const c = p.status === 'completed' ? 'done' : p.status === 'in_progress' ? 'cur' + (scls === 'wait' ? ' wait' : '') : '';
-      return `<div class="node ${c}" style="left:${left}%">${p.status === 'completed' ? svg('check', 3) : ''}</div>`;
-    }).join('');
-    const fillPct = n > 1 ? Math.min(100, ((done - 1 + (cur >= 0 && st.kind !== 'done' ? 0.5 : 0)) / (n - 1)) * 100) : 0;
-    const stepLabel = cur >= 0 ? `<b>${esc(l.step(cur + 1))}</b>${PRIV ? '' : esc(plan[cur].active || plan[cur].text)}${since && st.kind !== 'done' ? `<span>${dur(now - since)}</span>` : ''}`
-      : n && done === n ? `<b>${esc(l.allSteps)}</b>${esc(l.allDone)}` : `<b>${esc(l.noSteps)}</b>`;
+    const l = L(), st = m.st, plan = m.plan || [], g = root.Flow.progress(task, now, m);
+    const pct = Math.max(0, Math.min(100, g.pct)), live = st.kind !== 'done';
+    const node = (left, state) => `<div class="node ${state === 'done' ? 'done' : state === 'cur' ? 'cur' + (scls === 'wait' ? ' wait' : '') : ''}" style="left:${left}%">${state === 'done' ? svg('check', 3) : ''}</div>`;
+    let nodes, label, count;
+    if (g.plan) {
+      const n = plan.length;
+      nodes = plan.map((p, i) => node(((i + 1) / n) * 100, p.status === 'completed' ? 'done' : p.status === 'in_progress' && live ? 'cur' : '')).join('');
+      label = g.cur >= 0 ? `<b>${esc(l.step(g.cur + 1))}</b>${PRIV ? '' : esc(plan[g.cur].active || plan[g.cur].text)}${g.since && live ? `<span>${dur(now - g.since)}</span>` : ''}`
+        : g.done === n ? `<b>${esc(l.allSteps)}</b>${esc(l.allDone)}` : `<b>${esc(l.step(g.done + 1))}</b>`;
+      count = `${Math.round(pct)}%<small>${g.done} / ${n} ${esc(l.steps)}</small>`;
+    } else {
+      const ends = [...root.Flow.progress.STAGE_AT.slice(1, 3), 100];
+      nodes = ends.map((at, i) => node(at, pct >= 100 || i < g.stage ? 'done' : i === g.stage && live ? 'cur' : '')).join('');
+      label = pct >= 100 ? `<b>${esc(l.allDone)}</b>` : `<b>${esc(l.stageOf(g.stage + 1, 3))}</b>${esc(l.stages[g.stage])}${g.since && live ? `<span>${dur(now - g.since)}</span>` : ''}`;
+      count = `${Math.round(pct)}%<small>${esc(l.inferred)}</small>`;
+    }
     return {
-      track: n ? `<div class="track"><div class="fill" style="width:${Math.max(0, fillPct)}%"></div>${nodes}</div>` : '',
-      meta: `<div class="meta"><div class="step">${stepLabel}</div>${n ? `<div class="count">${done} / ${n}<small>${esc(l.steps)}</small></div>` : ''}</div>`,
+      track: `<div class="track"><div class="fill" style="width:${pct}%"></div>${nodes}</div>`,
+      meta: `<div class="meta"><div class="step">${label}</div><div class="count">${count}</div></div>`,
+      pct,
     };
   }
 
@@ -143,7 +149,7 @@
     const l = L();
     const free = opts.free || { x: 110, y: 40, w: (opts.w || 1707) - 220, h: (opts.h || 1067) - 140 };
     const n = items.length, wide = free.w >= 1250;
-    const others = (opts.others || []).slice(0, wide ? 2 : 3);
+    const others = (opts.others || []).slice(0, wide ? 2 : 3).sort(byStart);
     const gap = 18, minis = others.length ? others.length * (wide ? 0 : 68) + (wide ? 76 : 0) : 0;
     const laneH = wide ? free.h - 40 - minis : (free.h - 30 - minis - gap * (n - 1)) / n;
     const k = clampN(Math.floor((laneH - 162) / 64), 1, 6); // a lane is ~176px plus 64px per card
@@ -166,14 +172,14 @@
   function mini(o, now) {
     const l = L(), st = root.Scene.stateOf(o.task, now), b = BR(o.task);
     const [scls, stext] = status(st, now);
-    const planEv = o.task.ev.filter((e) => e.t <= now && e.plan && e.plan.length).pop();
-    const plan = planEv ? planEv.plan : [];
-    const n = plan.length, done = plan.filter((p) => p.status === 'completed').length, cur = plan.some((p) => p.status === 'in_progress') && st.kind !== 'done' ? 0.5 : 0;
+    const pct = Math.round(Math.max(0, Math.min(100, root.Flow.progress(o.task, now).pct)));
     const t = PRIV ? o.title || l.task : /^(Task|Background) \(from the session/.test(o.task.prompt || '') && o.title ? o.title : strip(o.task.prompt) || o.title || '';
-    const bar = n ? `<div class="mtrack"><div class="mfill" style="width:${Math.min(100, ((done + cur) / n) * 100)}%"></div></div>` : '';
-    return `<div class="other panel ${scls} src" style="${cvar(b)}" data-k="o${o.id}" data-sid="${esc(o.id)}"><div class="orow"><span class="odot"></span>${brand(b)}<span class="ot">${esc(t)}</span><span class="os">${esc(stext)}${n ? ` · ${done}/${n}` : ''}</span><span class="x" data-sid="x|${esc(o.id)}" title="${esc(l.clear)}">×</span></div>${bar}</div>`;
+    const bar = `<div class="mtrack"><div class="mfill" style="width:${pct}%"></div></div>`;
+    return `<div class="other panel ${scls} src" style="${cvar(b)}" data-k="o${o.id}" data-sid="${esc(o.id)}"><div class="orow"><span class="odot"></span>${brand(b)}<span class="ot">${esc(t)}</span><span class="os">${esc(stext)} · ${pct}%</span><span class="x" data-sid="x|${esc(o.id)}" title="${esc(l.clear)}">×</span></div>${bar}</div>`;
   }
   const clampN = (v, a, b) => Math.max(a, Math.min(b, v));
+  // small cards are chosen by priority (the order given), then shown in the order their tasks began
+  const byStart = (a, b) => ((a.task && a.task.t0) || 0) - ((b.task && b.task.t0) || 0);
   const fmtTok = (n) => root.I18N.tok(n);
 
   // plan usage and token use, kept compact: one gauge per quota, then a row of numbers.

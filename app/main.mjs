@@ -1,6 +1,7 @@
-// Agent Wallpaper: windows behind the desktop icons that draw what Claude Code, Codex and Cursor are doing.
-// Reads their local logs (read-only). The page makes no network requests: anything that is not a local file is
-// blocked. The only other thing read is an optional usage service on this computer (127.0.0.1:8787).
+// Agent Wallpaper: windows behind the desktop icons that draw what AI coding assistants are doing.
+// Reads their local logs (read-only). The pages make no network requests: anything that is not a local file is
+// blocked. The main process reads an optional usage service on this computer (127.0.0.1:8787) and, for updates,
+// GitHub Releases (app/update.mjs).
 import { app, BrowserWindow, Tray, Menu, globalShortcut, screen, nativeImage, session, ipcMain, shell, Notification, dialog } from 'electron';
 import path from 'node:path';
 import os from 'node:os';
@@ -16,6 +17,7 @@ import { DeepseekLive, supported as deepseekOk } from '../src/deepseek.mjs';
 import { Ledger, estimate } from '../src/estimate.mjs';
 import * as S from '../src/settings.mjs';
 import * as hooks from '../src/hooks.mjs';
+import { createUpdater } from './update.mjs';
 import '../src/scene.js';  // Scene.stateOf, for notifications
 import '../src/i18n.js';   // I18N
 import desk from './platform.mjs'; // Windows or macOS desktop layer
@@ -455,6 +457,10 @@ ipcMain.handle('cfg:pickFolder', async () => {
   const kind = fs.existsSync(path.join(p, 'projects')) || /[\\/]projects$/.test(p) ? 'claude' : fs.existsSync(path.join(p, 'sessions')) || path.basename(p) === 'sessions' ? 'codex' : null;
   return { path: p, kind };
 });
+ipcMain.handle('cfg:update', () => (up ? up.state() : null));
+ipcMain.handle('cfg:checkUpdate', () => { if (up) up.check(true); return true; });
+ipcMain.handle('cfg:installUpdate', () => { if (up) up.install(); return true; });
+ipcMain.handle('cfg:openReleases', () => { if (up) up.openPage(); return true; });
 ipcMain.handle('cfg:testNotify', () => { notify('Agent Wallpaper', I18N.lang === 'en' ? 'Notifications are working.' : '通知可以正常显示。'); return true; });
 
 function applyCfg(prev) {
@@ -463,6 +469,7 @@ function applyCfg(prev) {
   if (ch('sources') || ch('custom')) { buildSources(); pollAll(); codexUsage(); }
   if (ch('screens')) syncWindows();
   if (ch('keys')) registerKeys();
+  if (ch('updates') && up) up.schedule(cfg.updates.check);
   menu();
   send('view', view());
   pushData();
@@ -497,6 +504,17 @@ function quit() {
   for (const r of readers.values()) { try { r.close && r.close(); } catch {} }
   app.quit();
 }
+// the tray's update item says where things stand: check, checking, downloading, restart to update, or download
+function updateItem(l) {
+  if (!up) return [];
+  const u = up.state();
+  if (u.status === 'source') return [];
+  if (u.status === 'ready') return [{ label: l.upInstall(u.version), click: () => up.install() }];
+  if (u.status === 'available') return [{ label: l.upGet(u.version), click: () => up.openPage() }];
+  if (u.status === 'downloading') return [{ label: l.upDownloading(u.version, u.percent), enabled: false }];
+  if (u.status === 'checking') return [{ label: l.upChecking, enabled: false }];
+  return [{ label: l.upCheck, click: () => up.check(true) }];
+}
 function menu() {
   if (!tray) return;
   const l = t();
@@ -505,6 +523,7 @@ function menu() {
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: shown ? l.hide : l.show, accelerator: k.show, registerAccelerator: false, click: () => setShown(!shown) },
     { label: l.settings, accelerator: k.settings, registerAccelerator: false, click: openSettings },
+    ...updateItem(l),
     { type: 'separator' },
     { label: l.clearDone, click: () => send('clearDone') },
     { label: l.restore, enabled: Object.keys(dismissed).length > 0, click: () => { dismissed = {}; try { fs.writeFileSync(DISMISSED, '{}'); } catch {} pushData(); menu(); } },
@@ -518,6 +537,7 @@ function menu() {
   ]));
 }
 let keysOk = {};
+let up = null; // updates from GitHub Releases (app/update.mjs)
 function registerKeys() {
   globalShortcut.unregisterAll();
   const acts = { show: () => setShown(!shown), pause: () => setPaused(!paused), text: () => setText(!showText), settings: openSettings, quit };
@@ -548,7 +568,18 @@ app.whenReady().then(() => {
   tray = new Tray(nativeImage.createFromPath(path.join(here, '..', 'assets', MAC ? 'tray-16.png' : 'tray.png')));
   tray.on('click', () => setShown(!shown)); // left click: on / off; right click: the menu
   registerKeys(); menu();
-  if (process.env.WALL_SETTINGS) openSettings();
+  let lastStatus = null;
+  up = createUpdater({ log, notify, text: t, onChange: (u) => {
+    if (u.status !== lastStatus || u.status === 'downloading') { lastStatus = u.status; menu(); }
+    if (settingsWin && !settingsWin.isDestroyed()) settingsWin.webContents.send('update', u);
+  } });
+  up.schedule(cfg.updates.check);
+  menu();
+  if (process.env.WALL_SETTINGS) { // for testing; a page name (ai, look, usage, behave, privacy, keys) opens that page
+    openSettings();
+    const page = process.env.WALL_SETTINGS;
+    if (/^[a-z]+$/.test(page)) settingsWin.webContents.once('did-finish-load', () => setTimeout(() => settingsWin.webContents.executeJavaScript(`document.querySelector('[data-tab=${page}]')?.click(); setTimeout(() => { const m = document.querySelector('main'); if (m && ${!!process.env.WALL_SETTINGS_END}) m.scrollTop = m.scrollHeight; }, 200)`).catch(() => {}), 500));
+  }
   if (process.env.WALL_TESTNOTIFY) setTimeout(() => notify('Agent Wallpaper', I18N.lang === 'en' ? 'Notifications are working.' : '通知可以正常显示。'), 3000);
 
   // follow the logs: react as soon as a log file changes (a slower poll stays as a safety net)

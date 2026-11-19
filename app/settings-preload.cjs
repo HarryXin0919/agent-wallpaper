@@ -1,8 +1,13 @@
-// What the settings window may do: read and change the settings, pick a folder, send a test notification.
+// What the settings window may do: read and change the settings, pick a folder, send a test notification, updates.
 const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('cfg', {
   get: () => ipcRenderer.invoke('cfg:get'),
   set: (patch) => ipcRenderer.invoke('cfg:set', patch),
   pickFolder: () => ipcRenderer.invoke('cfg:pickFolder'),
   testNotify: () => ipcRenderer.invoke('cfg:testNotify'),
+  update: () => ipcRenderer.invoke('cfg:update'),
+  checkUpdate: () => ipcRenderer.invoke('cfg:checkUpdate'),
+  installUpdate: () => ipcRenderer.invoke('cfg:installUpdate'),
+  openReleases: () => ipcRenderer.invoke('cfg:openReleases'),
+  onUpdate: (fn) => ipcRenderer.on('update', (_e, u) => fn(u)),
 });

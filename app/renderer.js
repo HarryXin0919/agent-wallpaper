@@ -114,7 +114,10 @@
     if (!list.length) { moving = false; const html = usageHTML; if (html !== lastHTML) { const t = document.createElement('div'); t.innerHTML = html; morphChildren(stage, t); lastHTML = html; } sendTargets(); return; }
     // working right now (thinking, running, stuck, or waiting for an approval mid-task); a finished turn
     // that is waiting for your reply is not "working" and stays a small card
-    const working = list.filter((o) => ['think', 'work', 'stuck'].includes(o.k.kind) || (o.k.kind === 'wait' && o.k.approval)).slice(0, view.maxTasks || 4);
+    // which tasks get a lane goes by priority; the lanes themselves stay in the order the tasks began, so a box keeps
+    // its place while the tasks run instead of moving whenever another one does something
+    const working = list.filter((o) => ['think', 'work', 'stuck'].includes(o.k.kind) || (o.k.kind === 'wait' && o.k.approval)).slice(0, view.maxTasks || 4)
+      .sort((a, b) => (a.s.task.t0 || 0) - (b.s.task.t0 || 0));
     moving = working.length > 0; // nothing at work: the animation clock rests
     const free = UH ? { x: free0.x, y: free0.y + UH, w: free0.w, h: free0.h - UH } : free0;
     const tmp = document.createElement('div');
