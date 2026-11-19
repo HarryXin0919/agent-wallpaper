@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/HarryXin0919/agent-wallpaper/actions/workflows/ci.yml/badge.svg)](https://github.com/HarryXin0919/agent-wallpaper/actions/workflows/ci.yml) [![Release](https://img.shields.io/github/v/release/HarryXin0919/agent-wallpaper)](https://github.com/HarryXin0919/agent-wallpaper/releases/latest) · [中文说明](README.zh-CN.md)
 
-![Agent Wallpaper: a Claude Code task and a Codex task in progress, with the usage panel above](docs/screenshot-en.png)
+![Agent Wallpaper: a Claude Code task and a Codex task in progress, with the usage panel above](docs/demo-en.gif)
 
 Agent Wallpaper sits behind your desktop icons and draws each running task as frosted-glass panels: the request, the task's step-by-step plan as a progress bar, and the latest actions it took (files read, edits with lines added and removed, commands run, time spent thinking). Above them, a usage panel shows how much of your Claude and Codex plan quota is left.
 
@@ -125,7 +125,7 @@ If the panels do not appear on Windows, the tray menu has **Can't see it? Try an
 | `app/desktop-win.mjs`, `app/desktop-mac.mjs` | Placement on the desktop, mouse, process checks, per system |
 | `app/icons.ps1`, `app/watch.ps1`, `app/startup.ps1` | Windows: icon positions; open with Claude when run from source |
 | `test/` | Tests on made-up logs, and a launch check that starts the app and captures the screen |
-| `tools/demoframe.mjs` | Renders the README images from made-up tasks |
+| `tools/demoframe.mjs`, `tools/demogif.mjs` | Render the README image and animation from made-up tasks |
 
 **Not supported:** TRAE encrypts its conversation database, so it cannot be read.
 

@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/HarryXin0919/agent-wallpaper/actions/workflows/ci.yml/badge.svg)](https://github.com/HarryXin0919/agent-wallpaper/actions/workflows/ci.yml) [![Release](https://img.shields.io/github/v/release/HarryXin0919/agent-wallpaper)](https://github.com/HarryXin0919/agent-wallpaper/releases/latest) · [English](README.md)
 
-![Agent Wallpaper：一个 Claude Code 任务和一个 Codex 任务正在进行，上方是用量面板](docs/screenshot.png)
+![Agent Wallpaper：一个 Claude Code 任务和一个 Codex 任务正在进行，上方是用量面板](docs/demo.gif)
 
 壁纸位于桌面图标下面，把每个正在进行的任务画成毛玻璃面板：你提出的要求、任务清单形成的进度条，以及它刚刚做过的操作（读了哪些文件、改了几行、运行了什么命令、思考了多久）。最上面的用量面板显示 Claude 和 Codex 套餐额度还剩多少。
 
@@ -125,7 +125,7 @@ npm start
 | `app/desktop-win.mjs`、`app/desktop-mac.mjs` | 各系统上的桌面位置、鼠标、进程检测 |
 | `app/icons.ps1`、`app/watch.ps1`、`app/startup.ps1` | Windows：图标位置；从源码运行时跟随 Claude 打开 |
 | `test/` | 用虚构记录做的测试，以及启动程序并截屏的启动检查 |
-| `tools/demoframe.mjs` | 用虚构的任务渲染 README 里的图片 |
+| `tools/demoframe.mjs`、`tools/demogif.mjs` | 用虚构的任务渲染 README 里的图片和动图 |
 
 **不支持：** TRAE 的对话数据库是加密的，无法读取。
 
