@@ -1,4 +1,5 @@
 // The icon: a lit bulb with rays around it, some lit and some dim: an idea taking shape while you watch its progress.
+// White on blue.
 // Writes build/icon.svg, build/icon.png (1024) and the tray images in assets/. Small sizes get a simpler drawing
 // (fewer, thicker rays; one base bar) on a tile that fills the whole image.
 // usage: node tools/icon.mjs   (needs playwright-core: npm i -D playwright-core, or PW_FROM=<a package.json that has it>; CHROME=path)
@@ -10,7 +11,11 @@ import { createRequire } from 'node:module';
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const f1 = (x) => +x.toFixed(1);
 const P = (cx, cy, r, a) => [f1(cx + r * Math.cos((a * Math.PI) / 180)), f1(cy - r * Math.sin((a * Math.PI) / 180))];
-const TILE = ['#182040', '#0d1124'], LIGHT = ['#fff0dc', '#ffc396'], DIM = '#3d3c52', BASE = '#e2a67f';
+// the colours: the tile (top, bottom), the light of the bulb and the lit rays (top, bottom), the dim rays, the base
+// Blue with white: a mid-tone tile keeps 3:1 against both a dark and a light taskbar (3.4 and 4.3), and the white
+// bulb has 4.7 against the tile.
+export const BLUE = { tile: ['#3d7bff', '#2457e6'], light: ['#ffffff', '#ffffff'], dim: '#7fa2f8', base: '#ccdafc' };
+export const NAVY = { tile: ['#182040', '#0d1124'], light: ['#fff0dc', '#ffc396'], dim: '#3d3c52', base: '#e2a67f' };
 
 // the glass: a round globe that leaves its circle along the tangent and flows into a short, wide neck
 function glass(cx, cy, r) {
@@ -26,7 +31,8 @@ const SMALL = { n: 7, k: 5, from: 206, gap: 36, len: 40, w: 26, r: 78 };
 
 // small: the simpler drawing; bleed: the tile fills the image (tray), else it keeps a margin (app icon)
 // even: the lit rays are the middle ones (the light spreads from the top to both sides) instead of the first ones
-export function icon({ small = false, bleed = false, even = false } = {}) {
+export function icon({ small = false, bleed = false, even = false, pal = BLUE } = {}) {
+  const TILE = pal.tile, LIGHT = pal.light, DIM = pal.dim, BASE = pal.base;
   const C = 256, A = small ? SMALL : FULL, bar = small ? 26 : 17, gap = small ? 0 : 6;
   // the whole mark is centred in the tile: from the tip of the top ray to the bottom of the base
   const up = A.r + A.gap + A.len + A.w / 2;

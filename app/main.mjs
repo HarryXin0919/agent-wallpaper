@@ -600,14 +600,14 @@ function standing(list = visibleSnap(), now = Date.now()) {
   s.approve.sort((a, b) => a.since - b.since); s.reply.sort((a, b) => a.since - b.since);
   return s;
 }
-// the tray icon with a dot: blue while something is at work, amber when something waits for your approval
+// the tray icon with a dot: green while something is at work, amber when something waits for your approval
 const trayImgs = {};
 function trayImage(kind) {
   if (trayImgs[kind]) return trayImgs[kind];
   const base = nativeImage.createFromPath(path.join(here, '..', 'assets', MAC ? 'tray-16.png' : 'tray.png'));
   if (kind === 'idle' || MAC) return (trayImgs[kind] = base); // macOS shows a count next to the icon instead
   const { width: w, height: h } = base.getSize(), px = Buffer.from(base.toBitmap());
-  const fill = kind === 'approve' ? [0x3c, 0xc9, 0xff] : [0xff, 0xb6, 0x6f]; // BGR of #ffc93c and #6fb6ff
+  const fill = kind === 'approve' ? [0x3c, 0xc9, 0xff] : [0x8e, 0xe6, 0x6b]; // BGR of #ffc93c (amber) and #6be68e (green)
   const ring = [0x27, 0x1f, 0x1b], cx = w * 0.79, cy = h * 0.79, r = w * 0.2; // in the corner, clear of the bulb
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
     const d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy), a = Math.max(0, Math.min(1, r + 0.5 - d));
