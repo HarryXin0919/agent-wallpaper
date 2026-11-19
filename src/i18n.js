@@ -11,7 +11,7 @@
     needsApproval: '等你批准', error: '出错', inProgress: '进行中', finished: '完成',
     subOps: (n, d) => `子代理 · ${n} 个操作 · ${d || '进行中'}`, thoughtFor: (d) => `思考 ${d}`,
     taskTok: (t) => `本任务 ${t} tokens`, laneTok: (t) => `${t} tokens`, openIn: (n) => `在 ${n} 中打开 ›`, clear: '清除',
-    step: (n) => `第 ${n} 步`, allSteps: '全部步骤', allDone: '已完成', noSteps: '还没有列出步骤', steps: '步', stages: ['了解情况', '动手修改', '运行检查'], stageOf: (i, n) => `阶段 ${i}/${n}`, inferred: '按操作推断', earlier: (n) => `之前 ${n} 个操作`,
+    step: (n) => `第 ${n} 步`, allSteps: '全部步骤', allDone: '已完成', noSteps: '还没有列出步骤', steps: '步', took: (d) => `用时 ${d}`, under1: '不到 1 分钟', stages: ['了解情况', '动手修改', '运行检查'], earlier: (n) => `之前 ${n} 个操作`,
     task: '任务',
     usage: 'AI 用量', h5: '5 小时', week: '本周', about: '约', left: (p) => `剩 ${p}%`, used: (p) => `已用 ${p}%`,
     estNote: (a) => `Claude 为估算值，上次实测在 ${a}`, estOld: (a) => `Claude 为估算值，上次实测在 ${a} · 点一下任务栏右下角的 Claude 图标可校准`,
@@ -41,7 +41,7 @@
     needsApproval: 'Needs approval', error: 'Error', inProgress: 'running', finished: 'done',
     subOps: (n, d) => `Subagent · ${n} actions · ${d || 'running'}`, thoughtFor: (d) => `Thought ${d}`,
     taskTok: (t) => `${t} tokens this task`, laneTok: (t) => `${t} tokens`, openIn: (n) => `Open in ${n} ›`, clear: 'Clear',
-    step: (n) => `Step ${n}`, allSteps: 'All steps', allDone: 'done', noSteps: 'No steps listed yet', steps: 'steps', stages: ['Looking around', 'Changing files', 'Running checks'], stageOf: (i, n) => `Stage ${i}/${n}`, inferred: 'inferred from actions', earlier: (n) => `${n} earlier actions`,
+    step: (n) => `Step ${n}`, allSteps: 'All steps', allDone: 'done', noSteps: 'No steps listed yet', steps: 'steps', took: (d) => `took ${d}`, under1: 'under 1 min', stages: ['Looking around', 'Changing files', 'Running checks'], earlier: (n) => `${n} earlier actions`,
     task: 'Task',
     usage: 'AI usage', h5: '5-hour', week: 'Week', about: '~', left: (p) => `${p}% left`, used: (p) => `${p}% used`,
     estNote: (a) => `Claude figures are estimates; last measured ${a}`, estOld: (a) => `Claude figures are estimates; last measured ${a} · click the Claude tray icon to recalibrate`,
@@ -88,6 +88,12 @@
     if (m < 60) return m < 10 && s % 60 ? t.ms(m, s % 60) : t.m(m);
     return t.hm(Math.floor(m / 60), m % 60);
   }
+  // a calm run time: whole minutes only, so the number changes once a minute instead of every second
+  function mins(ms) {
+    const t = T(), m = Math.floor(Math.max(0, ms) / 60000);
+    if (m < 1) return t.under1;
+    return m < 60 ? t.m(m) : t.hm(Math.floor(m / 60), m % 60);
+  }
   function tok(n) {
     n = n || 0;
     if (lang === 'en') { if (n < 1e3) return String(Math.round(n)); if (n < 1e6) return (n / 1e3).toFixed(n < 1e4 ? 1 : 0) + 'K'; if (n < 1e9) return (n / 1e6).toFixed(n < 1e7 ? 1 : 0) + 'M'; return (n / 1e9).toFixed(2) + 'B'; }
@@ -97,5 +103,5 @@
   const reset = (s) => { const t = T(); return s == null ? '' : s < 3600 ? t.resetMin(Math.max(1, Math.round(s / 60))) : s < 86400 ? t.resetH(Math.round(s / 3600)) : t.resetD(Math.round(s / 86400)); };
   // "auto" follows the system language: Chinese for zh-*, English otherwise
   const pick = (want, locale) => (want === 'zh' || want === 'en' ? want : /^zh/i.test(locale || '') ? 'zh' : 'en');
-  root.I18N = { set: (l) => { lang = l === 'en' ? 'en' : 'zh'; }, get lang() { return lang; }, get t() { return T(); }, op, dur, tok, ago, reset, pick };
+  root.I18N = { set: (l) => { lang = l === 'en' ? 'en' : 'zh'; }, get lang() { return lang; }, get t() { return T(); }, op, dur, mins, tok, ago, reset, pick };
 })(typeof window !== 'undefined' ? window : globalThis);

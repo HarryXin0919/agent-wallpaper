@@ -63,7 +63,7 @@ Right-click the tray icon and choose **Settings…** (or press Ctrl + Alt + Shif
 | Page | What you can change |
 |---|---|
 | AI sources | Turn Claude Code, Codex, Gemini CLI, DeepSeek Harness and Cursor on or off, pick each one's color, add more log folders (a step-by-step guide is built in) |
-| Display | Language, position (auto avoids icons, or left / center / right), size, which screens, tasks shown at once, glass depth, animation |
+| Display | Language, position (auto avoids icons, or left / center / right), size, which screens, font (any installed font, or import a .ttf / .otf / .woff / .woff2 file), tasks shown at once, glass depth, animation |
 | Usage | Show or hide the usage panel and each quota |
 | Behavior & alerts | Appear with the Claude app and go away when it quits, exact approval waits, how long finished tasks stay, notifications and the quota alert level |
 | Privacy | Privacy mode |
@@ -123,6 +123,7 @@ If the panels do not appear on Windows, the tray menu has **Can't see it? Try an
 | `src/deepseek.mjs` | Read DeepSeek Harness sessions |
 | `src/cursor.mjs` | Read Cursor's agent conversations (read-only SQLite) |
 | `src/hooks.mjs` | The optional approval hook |
+| `src/fonts.mjs` | Imported fonts |
 | `src/estimate.mjs` | Claude quota estimate between readings |
 | `src/settings.mjs`, `src/i18n.js` | Settings with defaults; Chinese and English text |
 | `src/flow.js`, `src/scene.js` | Group actions by plan step; infer each task's state |

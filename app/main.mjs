@@ -6,7 +6,7 @@ import { app, BrowserWindow, Tray, Menu, globalShortcut, screen, nativeImage, se
 import path from 'node:path';
 import os from 'node:os';
 import fs from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { spawn } from 'node:child_process';
 import http from 'node:http';
 import { Live } from '../src/live.mjs';
@@ -17,6 +17,7 @@ import { DeepseekLive, supported as deepseekOk } from '../src/deepseek.mjs';
 import { Ledger, estimate } from '../src/estimate.mjs';
 import * as S from '../src/settings.mjs';
 import * as hooks from '../src/hooks.mjs';
+import * as fonts from '../src/fonts.mjs';
 import { createUpdater } from './update.mjs';
 import '../src/scene.js';  // Scene.stateOf, for notifications
 import '../src/i18n.js';   // I18N
@@ -403,7 +404,17 @@ function pollMouse() {
 
 // ---------------------------------------------------------------------------------------------------------------
 // What each wallpaper window needs to draw.
+const FONTS = path.join(app.getPath('userData'), 'fonts'); // copies of imported font files
+const fontUrl = (f) => pathToFileURL(path.join(FONTS, f.file)).href;
+const fontFiles = () => cfg.fonts.map((f) => ({ ...f, family: 'AW-' + f.id, url: fontUrl(f) }));
+function fontView() {
+  const f = cfg.font || 'system';
+  if (f.startsWith('name:')) return { family: f.slice(5) };
+  const x = f.startsWith('file:') && cfg.fonts.find((y) => 'file:' + y.id === f);
+  return x ? { family: 'AW-' + x.id, url: fontUrl(x) } : null;
+}
 const view = () => ({
+  font: fontView(),
   lang: I18N.lang, position: cfg.position, scale: cfg.scale, maxTasks: cfg.maxTasks, glass: cfg.glass, motion: cfg.motion, privacy: cfg.privacy,
   usage: cfg.usage, keepDone: cfg.keepDone, waitDone: cfg.waitDone,
   brands: { claude: { name: 'Claude', color: cfg.sources.claude.color, on: cfg.sources.claude.on }, codex: { name: 'Codex', color: cfg.sources.codex.color, on: cfg.sources.codex.on } },
@@ -446,10 +457,30 @@ function openSettings() {
 // the switch shows what is really set up (a login item or a Startup shortcut), not only what was last chosen
 const followOpenNow = () => { try { return FOLLOW_IN_APP ? app.getLoginItemSettings().openAtLogin : LINKS.some((n) => fs.existsSync(path.join(STARTUP, n))); } catch { return cfg.follow.open; } };
 const cfgView = () => ({ ...cfg, follow: { ...cfg.follow, open: followOpenNow() }, exactApproval: hooks.installed() });
-ipcMain.handle('cfg:get', () => ({ cfg: cfgView(), lang: I18N.lang, info: sourceInfo(), displays: displayInfo(), keysOk, version: app.getVersion(), platform: process.platform }));
+ipcMain.handle('cfg:get', () => ({ cfg: cfgView(), lang: I18N.lang, info: sourceInfo(), fontFiles: fontFiles(), displays: displayInfo(), keysOk, version: app.getVersion(), platform: process.platform }));
 ipcMain.handle('cfg:set', (_e, patch) => { const prev = cfg; cfg = S.apply(cfg, patch); if (patch && patch.follow && typeof patch.follow.open === 'boolean') startupShortcut(patch.follow.open);
   // the approval hook: added to or removed from Claude Code's settings only when this switch is changed
-  if (patch && typeof patch.exactApproval === 'boolean') { try { patch.exactApproval ? hooks.install() : hooks.uninstall(); } catch (e) { log('hook change failed', String(e)); } cfg = S.apply(cfg, { exactApproval: hooks.installed() }); } S.save(SETTINGS, cfg); applyCfg(prev); return { cfg: cfgView(), lang: I18N.lang, info: sourceInfo(), displays: displayInfo(), keysOk }; });
+  if (patch && typeof patch.exactApproval === 'boolean') { try { patch.exactApproval ? hooks.install() : hooks.uninstall(); } catch (e) { log('hook change failed', String(e)); } cfg = S.apply(cfg, { exactApproval: hooks.installed() }); } S.save(SETTINGS, cfg); applyCfg(prev); return { cfg: cfgView(), lang: I18N.lang, info: sourceInfo(), fontFiles: fontFiles(), displays: displayInfo(), keysOk }; });
+// import a font file: a copy goes into this program's folder and the font is selected
+function addFont(file) {
+  const r = fonts.importFont(file, FONTS);
+  if (r.error) return r;
+  const prev = cfg; cfg = S.apply(cfg, { fonts: [...cfg.fonts, r] }); cfg = S.apply(cfg, { font: 'file:' + r.id }); S.save(SETTINGS, cfg); applyCfg(prev);
+  return r;
+}
+const cfgState = (extra) => ({ cfg: cfgView(), lang: I18N.lang, info: sourceInfo(), fontFiles: fontFiles(), displays: displayInfo(), keysOk, ...extra });
+ipcMain.handle('cfg:importFont', async () => {
+  const r = await dialog.showOpenDialog(settingsWin, { properties: ['openFile'], filters: [{ name: 'Fonts', extensions: ['ttf', 'otf', 'woff', 'woff2'] }] });
+  if (r.canceled || !r.filePaths[0]) return null;
+  const got = addFont(r.filePaths[0]);
+  return cfgState(got.error ? { fontError: got.error } : {});
+});
+ipcMain.handle('cfg:removeFont', (_e, id) => {
+  const f = cfg.fonts.find((x) => x.id === id); if (!f) return cfgState();
+  const prev = cfg; cfg = S.apply(cfg, { font: cfg.font === 'file:' + id ? 'system' : cfg.font }); cfg = S.apply(cfg, { fonts: cfg.fonts.filter((x) => x.id !== id) });
+  fonts.removeFont(f, FONTS); S.save(SETTINGS, cfg); applyCfg(prev);
+  return cfgState();
+});
 ipcMain.handle('cfg:pickFolder', async () => {
   const r = await dialog.showOpenDialog(settingsWin, { properties: ['openDirectory', 'showHiddenFiles'] });
   if (r.canceled || !r.filePaths[0]) return null;
@@ -549,7 +580,10 @@ function registerKeys() {
 app.whenReady().then(() => {
   // no network from the pages: only local files may load
   session.defaultSession.webRequest.onBeforeRequest((d, cb) => { const block = !/^(file|devtools|data|blob|chrome-extension):/.test(d.url); if (block) log('blocked', d.url); cb({ cancel: block }); });
-  session.defaultSession.setPermissionRequestHandler((_w, _p, cb) => cb(false));
+  // pages get no permissions, except that the settings window may list the installed fonts (for the font menu)
+  const fontList = (wc, p) => p === 'local-fonts' && !!settingsWin && !settingsWin.isDestroyed() && wc === settingsWin.webContents;
+  session.defaultSession.setPermissionRequestHandler((wc, p, cb) => cb(fontList(wc, p)));
+  session.defaultSession.setPermissionCheckHandler((wc, p) => fontList(wc, p));
   I18N.set(I18N.pick(cfg.lang, app.getLocale()));
 
   // started at login while Claude is not open yet: wait in the tray
@@ -575,10 +609,12 @@ app.whenReady().then(() => {
   } });
   up.schedule(cfg.updates.check);
   menu();
+  if (process.env.WALL_FONT) log('font import', addFont(process.env.WALL_FONT)); // for testing: import this font file
   if (process.env.WALL_SETTINGS) { // for testing; a page name (ai, look, usage, behave, privacy, keys) opens that page
     openSettings();
     const page = process.env.WALL_SETTINGS;
-    if (/^[a-z]+$/.test(page)) settingsWin.webContents.once('did-finish-load', () => setTimeout(() => settingsWin.webContents.executeJavaScript(`document.querySelector('[data-tab=${page}]')?.click(); setTimeout(() => { const m = document.querySelector('main'); if (m && ${!!process.env.WALL_SETTINGS_END}) m.scrollTop = m.scrollHeight; }, 200)`).catch(() => {}), 500));
+    if (page === 'look') setTimeout(async () => { try { log('settings fonts', await settingsWin.webContents.executeJavaScript(`[...document.querySelectorAll("#font optgroup")].map((g) => g.label + ": " + g.children.length).join(", ")`)); } catch {} }, 4000);
+    if (/^[a-z]+$/.test(page)) settingsWin.webContents.once('did-finish-load', () => setTimeout(() => settingsWin.webContents.executeJavaScript(`document.querySelector('[data-tab=${page}]')?.click(); setTimeout(() => { const m = document.querySelector('main'); if (m && ${!!process.env.WALL_SETTINGS_END}) m.scrollTop = m.scrollHeight; }, 200)`, true).catch(() => {}), 500));
   }
   if (process.env.WALL_TESTNOTIFY) setTimeout(() => notify('Agent Wallpaper', I18N.lang === 'en' ? 'Notifications are working.' : '通知可以正常显示。'), 3000);
 

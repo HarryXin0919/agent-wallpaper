@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' file:;">
 <title>Agent Wallpaper</title>
 <style>
 :root { --bg:#12161d; --side:#0d1015; --card:rgba(255,255,255,.045); --edge:rgba(255,255,255,.09); --text:#eef1f6; --dim:rgba(232,237,245,.62); --ok:#b6f0b9; --warn:#ffd27a; --acc:#f4a98c; }
@@ -59,6 +59,13 @@ input[type=range] { width:180px; accent-color:var(--acc); }
 .btn { all:unset; padding:7px 14px; border-radius:9px; background:rgba(255,255,255,.1); cursor:pointer; font-size:12.5px; }
 .btn:hover { background:rgba(255,255,255,.16); }
 section[hidden] { display:none; }
+select { appearance:none; background:rgba(255,255,255,.08) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23c9ced8' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 12px center; color:var(--text); border:0; outline:0; border-radius:9px; padding:7px 32px 7px 12px; font:inherit; font-size:12.5px; max-width:230px; cursor:pointer; }
+select:hover { background-color:rgba(255,255,255,.12); }
+option, optgroup { background:#1b2028; color:#eef1f6; }
+.sample { margin:14px 0; padding:16px 18px; border-radius:12px; background:rgba(0,0,0,.22); }
+.sample b { display:block; font-size:19px; font-weight:600; margin-bottom:6px; }
+.sample span { color:var(--dim); font-size:14px; }
+.ctl { display:flex; gap:10px; align-items:center; flex:none; }
 .link { all:unset; color:var(--acc); font-size:12.5px; cursor:pointer; margin-top:2px; }
 .link:hover { text-decoration:underline; }
 .guide { background:var(--card); border:1px solid var(--edge); border-radius:14px; padding:16px 18px; margin-top:10px; user-select:text; }

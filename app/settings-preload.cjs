@@ -4,6 +4,8 @@ contextBridge.exposeInMainWorld('cfg', {
   get: () => ipcRenderer.invoke('cfg:get'),
   set: (patch) => ipcRenderer.invoke('cfg:set', patch),
   pickFolder: () => ipcRenderer.invoke('cfg:pickFolder'),
+  importFont: () => ipcRenderer.invoke('cfg:importFont'),
+  removeFont: (id) => ipcRenderer.invoke('cfg:removeFont', id),
   testNotify: () => ipcRenderer.invoke('cfg:testNotify'),
   update: () => ipcRenderer.invoke('cfg:update'),
   checkUpdate: () => ipcRenderer.invoke('cfg:checkUpdate'),

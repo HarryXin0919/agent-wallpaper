@@ -63,7 +63,7 @@ npm start
 | 页面 | 可以改什么 |
 |---|---|
 | AI 来源 | 开关 Claude Code、Codex、Gemini CLI、DeepSeek Harness 和 Cursor，选每个来源的颜色，添加其他记录文件夹（内置分步指南） |
-| 显示 | 语言、位置（自动避开图标，或固定在左 / 中 / 右）、大小、显示在哪块屏幕、同时显示几个任务、玻璃深浅、动画 |
+| 显示 | 语言、位置（自动避开图标，或固定在左 / 中 / 右）、大小、显示在哪块屏幕、字体（任选已安装的字体，或导入 .ttf / .otf / .woff / .woff2 文件）、同时显示几个任务、玻璃深浅、动画 |
 | 用量 | 显示或隐藏用量面板，以及其中每一项额度 |
 | 行为与提醒 | 跟随 Claude 出现和隐藏、准确识别“等你批准”、完成的任务保留多久、各类通知和额度提醒线 |
 | 隐私 | 隐私模式 |
@@ -123,6 +123,7 @@ npm start
 | `src/deepseek.mjs` | 读取 DeepSeek Harness 的会话 |
 | `src/cursor.mjs` | 读取 Cursor 的对话（只读 SQLite） |
 | `src/hooks.mjs` | 可选的“等你批准”钩子 |
+| `src/fonts.mjs` | 导入的字体 |
 | `src/estimate.mjs` | 两次实测之间估算 Claude 额度 |
 | `src/settings.mjs`、`src/i18n.js` | 设置及默认值；中英文文字 |
 | `src/flow.js`、`src/scene.js` | 按任务清单的步骤分组；判断任务状态 |

@@ -117,28 +117,25 @@
   }
 
   // the progress bar and step line shared by the full view and the lanes
-  // The fill is a continuous percentage (Flow.progress); a marker sits at the end of each step of the task list, or
-  // of each inferred stage when there is no list.
+  // Progress, kept quiet: a thin bar with one segment per step of the task list (a single segment when the stage is
+  // inferred from the actions), the percentage at its end, and under it what is being done now, with how long the
+  // task has run at the right (whole minutes; when it has ended, how long it took).
+  // An inferred percentage is marked with "~".
   function progress(task, m, now, scls) {
     const l = L(), st = m.st, plan = m.plan || [], g = root.Flow.progress(task, now, m);
-    const pct = Math.max(0, Math.min(100, g.pct)), live = st.kind !== 'done';
-    const node = (left, state) => `<div class="node ${state === 'done' ? 'done' : state === 'cur' ? 'cur' + (scls === 'wait' ? ' wait' : '') : ''}" style="left:${left}%">${state === 'done' ? svg('check', 3) : ''}</div>`;
-    let nodes, label, count;
-    if (g.plan) {
-      const n = plan.length;
-      nodes = plan.map((p, i) => node(((i + 1) / n) * 100, p.status === 'completed' ? 'done' : p.status === 'in_progress' && live ? 'cur' : '')).join('');
-      label = g.cur >= 0 ? `<b>${esc(l.step(g.cur + 1))}</b>${PRIV ? '' : esc(plan[g.cur].active || plan[g.cur].text)}${g.since && live ? `<span>${dur(now - g.since)}</span>` : ''}`
-        : g.done === n ? `<b>${esc(l.allSteps)}</b>${esc(l.allDone)}` : `<b>${esc(l.step(g.done + 1))}</b>`;
-      count = `${Math.round(pct)}%<small>${g.done} / ${n} ${esc(l.steps)}</small>`;
-    } else {
-      const ends = [...root.Flow.progress.STAGE_AT.slice(1, 3), 100];
-      nodes = ends.map((at, i) => node(at, pct >= 100 || i < g.stage ? 'done' : i === g.stage && live ? 'cur' : '')).join('');
-      label = pct >= 100 ? `<b>${esc(l.allDone)}</b>` : `<b>${esc(l.stageOf(g.stage + 1, 3))}</b>${esc(l.stages[g.stage])}${g.since && live ? `<span>${dur(now - g.since)}</span>` : ''}`;
-      count = `${Math.round(pct)}%<small>${esc(l.inferred)}</small>`;
+    const pct = Math.max(0, Math.min(100, g.pct)), live = !(st.kind === 'done' || (st.kind === 'wait' && !st.approval));
+    const n = g.plan ? plan.length : 1;
+    let segs = '';
+    for (let i = 0; i < n; i++) {
+      const f = Math.max(0, Math.min(1, (pct * n) / 100 - i));
+      segs += `<div class="seg${live && f > 0 && f < 1 ? ' cur' : ''}"><i style="width:${(f * 100).toFixed(1)}%"></i></div>`;
     }
+    const label = !live ? '' : g.plan ? (g.cur >= 0 ? (PRIV ? l.step(g.cur + 1) : plan[g.cur].active || plan[g.cur].text) : '') : l.stages[g.stage];
+    const ran = (live ? now : Math.min(now, st.since || now)) - task.t0;
+    const time = ran > 0 ? (live ? root.I18N.mins(ran) : l.took(root.I18N.mins(ran))) : '';
     return {
-      track: `<div class="track"><div class="fill" style="width:${pct}%"></div>${nodes}</div>`,
-      meta: `<div class="meta"><div class="step">${label}</div><div class="count">${count}</div></div>`,
+      track: `<div class="prog${n > 10 ? ' many' : ''}"><div class="track">${segs}</div><div class="pct">${!g.plan && pct < 100 ? '<small class="ab">~</small>' : ''}${Math.round(pct)}<small>%</small></div></div>`,
+      meta: `<div class="meta"><div class="step">${esc(label)}</div><div class="time">${esc(time)}</div></div>`,
       pct,
     };
   }
@@ -174,8 +171,10 @@
     const [scls, stext] = status(st, now);
     const pct = Math.round(Math.max(0, Math.min(100, root.Flow.progress(o.task, now).pct)));
     const t = PRIV ? o.title || l.task : /^(Task|Background) \(from the session/.test(o.task.prompt || '') && o.title ? o.title : strip(o.task.prompt) || o.title || '';
-    const bar = `<div class="mtrack"><div class="mfill" style="width:${pct}%"></div></div>`;
-    return `<div class="other panel ${scls} src" style="${cvar(b)}" data-k="o${o.id}" data-sid="${esc(o.id)}"><div class="orow"><span class="odot"></span>${brand(b)}<span class="ot">${esc(t)}</span><span class="os">${esc(stext)} · ${pct}%</span><span class="x" data-sid="x|${esc(o.id)}" title="${esc(l.clear)}">×</span></div>${bar}</div>`;
+    // a finished task says so in words; the bar and the number are only for one still running
+    const live = !(st.kind === 'done' || (st.kind === 'wait' && !st.approval));
+    const bar = live ? `<div class="mtrack"><div class="mfill" style="width:${pct}%"></div></div>` : '';
+    return `<div class="other panel ${scls} src" style="${cvar(b)}" data-k="o${o.id}" data-sid="${esc(o.id)}"><div class="orow"><span class="odot"></span>${brand(b)}<span class="ot">${esc(t)}</span><span class="os">${esc(stext)}${live ? ` · ${pct}%` : ''}</span><span class="x" data-sid="x|${esc(o.id)}" title="${esc(l.clear)}">×</span></div>${bar}</div>`;
   }
   const clampN = (v, a, b) => Math.max(a, Math.min(b, v));
   // small cards are chosen by priority (the order given), then shown in the order their tasks began

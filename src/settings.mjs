@@ -14,6 +14,8 @@ export const DEFAULTS = {
   },
   custom: [], // extra log folders: [{ id, name, kind: 'claude' | 'codex', path, color, on }]
   lang: 'auto',        // auto | zh | en
+  font: 'system',      // system | name:<an installed font family> | file:<id of an imported font>
+  fonts: [],           // imported fonts: [{ id, name, file }] (the files are kept in the fonts folder next to the settings)
   position: 'auto',    // auto (avoid icons) | left | center | right
   scale: 1,            // 0.8 – 1.4
   screens: 'primary',  // primary | all | <display id>
@@ -49,6 +51,10 @@ function tidy(s) {
   s.notify.quotaAt = clamp(s.notify.quotaAt, 50, 99);
   s.custom = (Array.isArray(s.custom) ? s.custom : []).filter((c) => c && c.path && /^(claude|codex)$/.test(c.kind)).slice(0, 8)
     .map((c, i) => ({ id: String(c.id || 'c' + (i + 1)).replace(/[^\w-]/g, '').slice(0, 12) || 'c' + (i + 1), name: String(c.name || c.kind).slice(0, 30), kind: c.kind, path: String(c.path), color: /^#[0-9a-f]{6}$/i.test(c.color) ? c.color : '#9fe6d2', on: c.on !== false }));
+  s.fonts = (Array.isArray(s.fonts) ? s.fonts : []).filter((f) => f && /^[\w-]{1,24}$/.test(f.id || '') && /^[\w-]+\.(ttf|otf|woff2?)$/.test(f.file || '')).slice(0, 30)
+    .map((f) => ({ id: f.id, name: String(f.name || 'Font').replace(/["'\\;{}<>]/g, '').slice(0, 60) || 'Font', file: f.file }));
+  s.font = String(s.font || 'system').replace(/["'\\;{}<>]/g, '').slice(0, 90);
+  if (!/^(system$|name:.+|file:.+)/.test(s.font) || (s.font.startsWith('file:') && !s.fonts.some((f) => 'file:' + f.id === s.font))) s.font = 'system';
   for (const v of Object.values(s.sources)) if (!/^#[0-9a-f]{6}$/i.test(v.color || '')) v.color = '#ffffff';
   return s;
 }

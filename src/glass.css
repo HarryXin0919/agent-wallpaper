@@ -6,11 +6,14 @@
   --text: #f6f7f9;
   --dim: rgba(240, 244, 250, .66);
   --claude: #f4a98c; --codex: #8fc1ff;
+  /* text and headline fonts; a font chosen in the settings is put in front of these (renderer.js) */
+  --ff: "Segoe UI Variable Text", "Segoe UI", system-ui, "Microsoft YaHei UI", "PingFang SC", sans-serif;
+  --ffd: "Segoe UI Variable Display", "Segoe UI", system-ui, "Microsoft YaHei UI", "PingFang SC", sans-serif;
   --edit: #ffb59b; --web: #a8d0ff; --agent: #9fe6d2; --wait: #ffd27a; --err: #ffb0c0; --think: #c9d3ff; --plus: #b6f0b9;
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; overflow: hidden; background: transparent; color: var(--text);
-  font-family: "Segoe UI Variable Text", "Segoe UI", "Microsoft YaHei UI", sans-serif; -webkit-font-smoothing: antialiased; }
+  font-family: var(--ff); -webkit-font-smoothing: antialiased; }
 .wp { position: fixed; inset: 0; background-position: center; background-size: cover; }
 .wp::after { content: ""; position: absolute; inset: 0;
   background: linear-gradient(180deg, rgba(8, 14, 24, .30) 0%, rgba(8, 14, 24, .04) 34%, rgba(8, 14, 24, .06) 62%, rgba(8, 14, 24, .34) 100%); }
@@ -31,29 +34,27 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: transparent;
 .status .dot::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: currentColor; transform: scale(calc(1 + 2.2 * var(--a18, 0))); opacity: calc(.6 - .6 * var(--a18, 0)); }
 .status.wait { color: var(--wait); } .status.stuck { color: var(--err); } .status.done { color: var(--plus); } .status.done .dot::after { animation: none; opacity: 0; }
 .elapsed { font-size: 13px; color: var(--dim); white-space: nowrap; }
-.title { margin: 14px 0 20px; font: 600 27px/1.25 "Segoe UI Variable Display", "Segoe UI", "Microsoft YaHei UI", sans-serif; letter-spacing: -.2px;
+.title { margin: 14px 0 20px; font: 600 27px/1.25 var(--ffd); letter-spacing: -.2px;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-shadow: 0 1px 12px rgba(0, 0, 0, .25); }
 .sub { margin: -14px 0 18px; font-size: 13px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-.track { position: relative; height: 10px; margin: 0 9px; border-radius: 99px; background: rgba(255, 255, 255, .16); }
-.fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 99px; overflow: hidden;
-  background: linear-gradient(90deg, rgba(255, 255, 255, .72), #fff); box-shadow: 0 0 22px rgba(255, 255, 255, .45); transition: width 1.2s cubic-bezier(.2, .8, .2, 1); }
-.fill::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .9), transparent);
+/* progress: one thin segment per step (a single one when the steps are inferred), the percentage at its end, and
+   one quiet line under it for what is being done now */
+.prog { display: flex; align-items: center; gap: 18px; }
+.track { flex: 1; min-width: 0; display: flex; gap: 5px; height: 6px; }
+.prog.many .track { gap: 3px; }
+.seg { flex: 1; min-width: 0; border-radius: 99px; background: rgba(255, 255, 255, .13); overflow: hidden; }
+.seg i { position: relative; display: block; height: 100%; border-radius: 99px; background: rgba(255, 255, 255, .94); overflow: hidden;
+  transition: width 1.2s cubic-bezier(.2, .8, .2, 1); }
+.seg.cur i::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, var(--c, #fff), transparent); opacity: .55;
   transform: translateX(calc(-100% + 200% * var(--sh, 0))); }
-.node { position: absolute; top: 50%; isolation: isolate; width: 20px; height: 20px; margin: -10px 0 0 -10px; border-radius: 50%;
-  background: rgba(20, 26, 34, .72); border: 2px solid rgba(255, 255, 255, .42); display: grid; place-items: center; }
-.node svg { width: 12px; height: 12px; }
-.node.done { background: #fff; border-color: #fff; color: #1b2330; }
-.node.cur { border-color: #fff; background: rgba(255, 255, 255, .25); }
-.node.cur::before { content: ""; position: absolute; inset: -2px; border-radius: 50%; border: 2px solid #fff; transform: scale(calc(1 + 1.1 * var(--a20, 0))); opacity: calc(.55 - .55 * var(--a20, 0)); }
-.node.cur::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #fff; }
-.wait .node.cur, .node.cur.wait { border-color: var(--wait); } .node.cur.wait::before { border-color: var(--wait); } .node.cur.wait::after { background: var(--wait); }
-.meta { display: flex; justify-content: space-between; align-items: baseline; gap: 18px; margin-top: 18px; }
-.step { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.step b { font-weight: 600; color: var(--dim); margin-right: 8px; }
-.step span { font-weight: 400; color: var(--dim); margin-left: 8px; font-size: 13px; }
-.count { font: 600 15px "Segoe UI Variable Display", "Segoe UI", sans-serif; white-space: nowrap; }
-.count small { color: var(--dim); font-weight: 400; font-size: 13px; margin-left: 6px; }
+.pct { flex: none; min-width: 46px; text-align: right; font: 500 19px/1 var(--ffd); letter-spacing: -.3px;
+  font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pct small { font-size: 12px; font-weight: 400; color: var(--dim); margin-left: 2px; letter-spacing: 0; }
+.pct small.ab { margin: 0 3px 0 0; }
+.meta { display: flex; align-items: baseline; justify-content: space-between; gap: 18px; margin-top: 12px; }
+.step { flex: 1; min-width: 0; font-size: 14px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.time { flex: none; font-size: 13px; color: var(--dim); opacity: .8; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .said { margin-top: 10px; font-size: 13px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* ---- what it is doing, step by step ---- */
@@ -98,7 +99,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: transparent;
 .mini svg { width: 14px; height: 14px; color: var(--agent); }
 .mini.live { outline: 1px solid rgba(159, 230, 210, .7); }
 
-.notext .title, .notext .sub, .notext .meta, .notext .said, .notext .elapsed, .notext .status span, .notext .card .tx, .notext .tag, .notext .sep, .notext .chip, .notext .branch .lb, .notext .mini span { visibility: hidden; }
+.notext .title, .notext .sub, .notext .meta, .notext .pct, .notext .said, .notext .elapsed, .notext .status span, .notext .card .tx, .notext .tag, .notext .sep, .notext .chip, .notext .branch .lb, .notext .mini span { visibility: hidden; }
 
 @keyframes pulse { 0% { box-shadow: 0 0 0 0 currentColor; } 70% { box-shadow: 0 0 0 7px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
 @keyframes ring { 0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, .5); } 80%, 100% { box-shadow: 0 0 0 12px rgba(255, 255, 255, 0); } }
@@ -138,14 +139,14 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: transparent;
 .ot { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1; }
 .os { color: var(--dim); font-size: 12.5px; white-space: nowrap; flex: none; max-width: 52%; overflow: hidden; text-overflow: ellipsis; }
 .other.wait .os { color: var(--wait); } .other.stuck .os { color: var(--err); }
-.mtrack { height: 4px; margin-top: 10px; border-radius: 99px; background: rgba(255, 255, 255, .16); overflow: hidden; }
-.mfill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, rgba(255, 255, 255, .7), #fff); }
+.mtrack { height: 3px; margin-top: 10px; border-radius: 99px; background: rgba(255, 255, 255, .13); overflow: hidden; }
+.mfill { height: 100%; border-radius: 99px; background: rgba(255, 255, 255, .9); }
 .notext .ot, .notext .os { visibility: hidden; }
 /* resting (paused, or the desktop is covered): no motion at all */
 /* motion is driven from the page at 15 frames a second (see renderer.js); resting simply stops that clock */
 .stage { transition: opacity 1.2s ease; }
 /* each moving piece gets its own layer, so a change is recombined on the GPU instead of repainted */
-.status .dot::after, .fill::after, .node.cur::before, .card.live::after, .arrow.live::before, .dots i { will-change: transform, opacity; }
+.status .dot::after, .seg.cur i::after, .card.live::after, .arrow.live::before, .dots i { will-change: transform, opacity; }
 
 /* over a live wallpaper (Wallpaper Engine): the picture keeps changing, so the glass must stay readable on any of
    them — bright, dark or colorful. A deeper tint, a soft dark halo around the whole group, and brighter small text. */
@@ -158,7 +159,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: transparent;
 .livewp .col { isolation: isolate; }
 .livewp .col::before { content: ""; position: absolute; inset: -70px -60px; z-index: -1; pointer-events: none;
   background: radial-gradient(closest-side, rgba(0, 0, 0, .42), rgba(0, 0, 0, .22) 60%, transparent); }
-.livewp .title, .livewp .step, .livewp .count, .livewp .card .t, .livewp .ot { text-shadow: 0 1px 2px rgba(0, 0, 0, .45); }
+.livewp .title, .livewp .step, .livewp .pct, .livewp .card .t, .livewp .ot { text-shadow: 0 1px 2px rgba(0, 0, 0, .45); }
 .livewp .status, .livewp .tag { background-color: rgba(0, 0, 0, .35); }
 .livewp .other { background: linear-gradient(160deg, rgba(20, 25, 34, .80), rgba(10, 13, 18, .76)); }
 
@@ -176,12 +177,11 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: transparent;
 .h.lanes .lanebox { flex-direction: row; width: 100%; justify-content: center; align-items: flex-start; }
 .h.lanes .lane { width: calc((100% - 18px * (var(--lanes) - 1)) / var(--lanes)); max-width: 620px; }
 .lane { padding: 16px 22px 18px; min-width: 0; }
-.ltitle { margin: 12px 0 16px; font: 600 19px/1.3 "Segoe UI Variable Display", "Segoe UI", "Microsoft YaHei UI", sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 10px rgba(0, 0, 0, .25); }
-.lane .track { height: 8px; }
-.lane .node { width: 16px; height: 16px; margin: -8px 0 0 -8px; }
-.lane .node svg { width: 10px; height: 10px; }
-.lane .meta { margin-top: 14px; }
-.lane .step { font-size: 14px; }
+.ltitle { margin: 12px 0 16px; font: 600 19px/1.3 var(--ffd); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 10px rgba(0, 0, 0, .25); }
+.lane .track { height: 5px; }
+.lane .pct { font-size: 17px; min-width: 42px; }
+.lane .meta { margin-top: 10px; }
+.lane .step { font-size: 13.5px; }
 .lflow { display: flex; flex-direction: column; gap: 14px; margin-top: 16px; }
 .lflow .card { width: auto; height: 50px; border-radius: 14px; padding: 0 12px; }
 .lflow .card .ic { width: 30px; height: 30px; border-radius: 9px; }
@@ -210,11 +210,11 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: transparent;
 .ub { height: 7px; margin: 7px 0 6px; border-radius: 99px; background: rgba(255, 255, 255, .14); overflow: hidden; }
 .ub i { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, rgba(255, 255, 255, .7), #fff); }
 .un { display: flex; justify-content: space-between; align-items: baseline; }
-.un b { font: 600 17px "Segoe UI Variable Display", "Segoe UI", sans-serif; } .un small { font-size: 11.5px; color: var(--dim); }
+.un b { font: 600 17px var(--ffd); } .un small { font-size: 11.5px; color: var(--dim); }
 .ug.warm .un b { color: var(--wait); } .ug.hot .un b { color: var(--err); }
 .uss { display: flex; gap: 10px; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, .1); }
 .us { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.us b { font: 600 16px "Segoe UI Variable Display", "Segoe UI", "Microsoft YaHei UI", sans-serif; white-space: nowrap; }
+.us b { font: 600 16px var(--ffd); white-space: nowrap; }
 .us span { font-size: 11px; color: var(--dim); white-space: nowrap; }
 .us.live b { color: #9fe6d2; }
 .us.wk { flex: 0 0 74px; }
@@ -241,6 +241,6 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: transparent;
 /* ---- settings: light glass, and motion turned down or off ---- */
 .lightglass .panel { background: linear-gradient(160deg, rgba(40, 48, 62, .38), rgba(24, 30, 40, .32)); }
 .lightglass .col::before { display: none; }
-.calm .status .dot::after, .calm .node.cur::before, .calm .card.live::after, .calm .arrow.live::before, .calm .fill::after { opacity: 0 !important; }
+.calm .status .dot::after, .calm .card.live::after, .calm .arrow.live::before, .calm .seg.cur i::after { opacity: 0 !important; }
 .calm .card.live::after { opacity: .5 !important; }
 .still * { transition: none !important; }
