@@ -84,7 +84,7 @@
     const pr = progress(task, m, now, scls);
     const sayEv = [...task.ev].reverse().find((e) => e.k === 'say' && e.t <= now);
     const ended = st.kind === 'done', title = titleOf(m, task);
-    const hero = `<div class="hero panel ${scls} src" style="${cvar(b)}" data-k="hero"${opts.sid ? ` data-sid="${esc(opts.sid)}"` : ''}>
+    const hero = `<div class="hero" data-k="hero">
       <div class="top"><div class="status ${scls}"><span class="dot"></span><span>${esc(stext)}</span></div>${brand(b)}
         ${task.tok ? `<div class="ttok">${esc(l.taskTok(fmtTok(task.tok.total)))}</div>` : ''}<div class="open">${esc(l.openIn(b.name))}</div>${opts.sid && (st.kind === 'done' || (st.kind === 'wait' && !st.approval)) ? `<span class="x" data-sid="x|${esc(opts.sid)}" title="${esc(l.clear)}">×</span>` : ''}</div>
       <div class="title">${esc(title)}</div>
@@ -109,10 +109,12 @@
       if (i) parts.push(`<div class="arrow${op.live ? ' live' : ''}" data-k="a${op.t}"></div>`);
       parts.push(cardHTML(op, now, vertical));
     });
-    const flow = shown.length ? `<div class="flow panel" data-k="flow">${parts.join('')}</div>` : '';
+    const flow = shown.length ? `<div class="flow" data-k="flow">${parts.join('')}</div>` : '';
+    // one panel for the task: who is doing it and what was asked, then what it is doing. The actions never stand alone
+    const one = `<div class="task panel ${scls} src" style="${cvar(b)}" data-k="task"${opts.sid ? ` data-sid="${esc(opts.sid)}"` : ''}>${hero}${flow}</div>`;
     const rest = others.length ? `<div class="others" data-k="others">${others.map((o) => mini(o, now)).join('')}</div>` : '';
     el.className = 'stage' + (opts.text === false ? ' notext' : '');
-    el.innerHTML = `<div class="col ${vertical ? 'v' : 'h'}" data-k="col" style="left:${free.x}px;top:${free.y}px;width:${free.w}px;height:${free.h}px">${hero}${flow}${rest}</div>`;
+    el.innerHTML = `<div class="col ${vertical ? 'v' : 'h'}" data-k="col" style="left:${free.x}px;top:${free.y}px;width:${free.w}px;height:${free.h}px">${one}${rest}</div>`;
     return { st, vertical, free };
   }
 

@@ -27,6 +27,11 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: transparent;
 .col.h { justify-content: space-between; padding: 14px 0 34px; }
 .col.v { justify-content: flex-start; padding-top: 16px; }
 .hero { position: relative; width: min(860px, 100%); padding: 22px 30px 24px; flex: none; }
+/* a task is one panel: its header (who, what was asked, progress), then its actions under a thin line */
+.task { position: relative; flex: none; width: min(860px, 100%); }
+.task .hero { width: auto; }
+.task .flow { border-top: 1px solid rgba(255, 255, 255, .1); }
+.h .task { width: fit-content; min-width: min(860px, 100%); max-width: 100%; }
 .top { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .status { display: inline-flex; align-items: center; gap: 9px; height: 30px; padding: 0 14px 0 12px; border-radius: 99px;
   background: rgba(255, 255, 255, .12); font-size: 13.5px; font-weight: 600; white-space: nowrap; }
@@ -115,7 +120,9 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: transparent;
 
 /* ---- narrow free space: the actions stack downward under the task ---- */
 .v .hero { width: min(760px, 100%); }
+.v .task { width: min(760px, 100%); } .v .task .hero { width: auto; }
 .v .flow { flex-direction: column; align-items: stretch; width: min(760px, 100%); padding: 22px 22px 20px; }
+.v .task .flow { width: auto; padding: 20px 30px 24px; }
 .v .card { width: auto; height: 62px; }
 .v .chip { height: 40px; }
 .v .arrow { width: 2px; height: 16px; margin: 0 0 0 31px; background: rgba(255, 255, 255, .32); }
