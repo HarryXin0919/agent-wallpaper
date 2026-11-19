@@ -8,7 +8,7 @@
 
 Agent Wallpaper sits behind your desktop icons and draws each running task as frosted-glass panels: the request, the task's step-by-step plan as a progress bar, and the latest actions it took (files read, edits with lines added and removed, commands run, time spent thinking). Above them, a usage panel shows how much of your Claude and Codex plan quota is left.
 
-It reads the session logs these assistants already keep on your computer. It never changes them, changes no system settings, and the window itself makes no network requests.
+It reads the session logs these assistants already keep on your computer and never changes them. It changes nothing else on your system unless you turn on an option that says what it changes (see [Privacy and system changes](#privacy-and-system-changes)), and it sends nothing over the network.
 
 ## Features
 
@@ -133,6 +133,24 @@ If the panels do not appear on Windows, the tray menu has **Can't see it? Try an
 | `tools/demoframe.mjs`, `tools/demogif.mjs` | Render the README image and animation from made-up tasks |
 
 **Not supported:** TRAE encrypts its conversation database, so it cannot be read.
+
+## Privacy and system changes
+
+This program does not transfer any information to other networked systems. Everything it shows is read from files on your own computer; the only address it contacts is `127.0.0.1:8787`, and only if you run the optional local usage service described above.
+
+It changes your system only through these options, each explained next to its switch in the settings:
+
+| Option | What it changes | Undone by |
+|---|---|---|
+| Appear when Claude opens (on by default) | Windows: a login item for the installed app, or a shortcut in the Startup folder when run from source. macOS: a login item | Turning the switch off |
+| Exact "waiting for your approval" (off by default) | Adds one Notification hook to `~/.claude/settings.json` (a copy is kept as `settings.json.agent-wallpaper.bak`) | Turning the switch off removes the hook |
+
+## Uninstall
+
+1. In the settings, turn off **Exact "waiting for your approval"** if you turned it on, and **Appear when Claude opens**.
+2. Quit from the tray menu.
+3. **Windows:** Settings → Apps → Installed apps → Agent Wallpaper → Uninstall (the portable build is a single file; delete it). **macOS:** drag Agent Wallpaper from Applications to the Trash.
+4. Optional: delete its settings folder, `%APPDATA%\Agent Wallpaper` on Windows or `~/Library/Application Support/Agent Wallpaper` on macOS, and `~/.claude/agent-wallpaper` if the approval hook was used.
 
 ## Not affiliated
 
