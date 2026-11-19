@@ -79,7 +79,7 @@ function snapAll() {
     for (const it of s.r.snapshot()) {
       const id = s.id.startsWith('x') && s.kind === 'claude' ? `${s.id}:${it.id}` : it.id; // custom Claude folders get their own prefix
       const task = { ...it.task, src: s.kind, brand: { name: s.name, color: s.color } };
-      if (s.id === 'claude' && cfg.exactApproval) { task.exact = true; task.asks = asks.for(it.id).filter((t) => t >= task.t0); }
+      if (s.id === 'claude' && cfg.exactApproval) { task.exact = true; task.ask = asks.open(it.id, task.t0, task.ev.length); }
       out.push({ ...it, id, src: s.id, task });
     }
   }

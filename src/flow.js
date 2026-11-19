@@ -60,6 +60,7 @@
     else if (st.kind === 'work' || (st.kind === 'wait' && st.why === 'approve') || st.kind === 'stuck') {
       const op = active.ops.find((o) => o.e === st.tool);
       if (op) { op.live = true; op.wait = st.kind === 'wait'; op.stuck = st.kind === 'stuck'; }
+      else if (st.kind === 'wait') active.ops.push({ kind: 'ask', t: st.since, live: true, wait: true, step: active, title: '等你批准' }); // hook-reported, the step is not in the log yet
       else if (st.kind === 'stuck') active.ops.push({ kind: 'stuck', t: st.since, live: true, step: active, title: st.why === 'retry' ? '连不上服务器，重试中' : st.why === 'errors' ? `最近 ${st.n} 步出错` : `${dur(now - st.since)}没有动静` });
     } else if (st.kind === 'wait') {
       const t = st.tool;

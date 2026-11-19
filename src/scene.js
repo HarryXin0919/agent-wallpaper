@@ -3,7 +3,11 @@
 (function (root) {
   function stateOf(task, now) {
     const ev = task.ev.filter((e) => e.t <= now);
-    if (!ev.length) return { kind: 'think', since: task.t0 };
+    // reported by Claude Code's notification hook (when turned on): a permission prompt is open. Claude Code writes
+    // the step it asks about to the log only once you answer, so meanwhile the log shows nothing pending.
+    // (a prompt left open over 2 hours: the session was most likely closed with it, like an abandoned task below)
+    if (task.exact && task.ask && task.ask <= now && now - task.ask < 2 * 3600e3) return { kind: 'wait', since: task.ask, approval: true, why: 'approve' };
+    if (!ev.length) return now - task.t0 > 8 * 60000 ? { kind: 'stuck', since: task.t0, why: 'idle' } : { kind: 'think', since: task.t0 };
     const lastAct = Math.max(task.t0, ...ev.map((e) => Math.max(e.t + (e.dur || 0), e.tEnd && e.tEnd <= now ? e.tEnd : 0)));
     // a turn can stop and later continue (an app event wakes it); only the last stop with nothing after it counts
     let lastStop = -1;
@@ -32,10 +36,8 @@
       const p = pending[pending.length - 1], el = now - p.t;
       // the log itself says this step waits for approval (Gemini CLI)
       if (p.awaiting) return { kind: 'wait', since: p.t, approval: true, tool: p, why: 'approve' };
-      // reported by Claude Code's notification hook (when turned on): waiting exactly while a prompt is open
+      // with the hook, a step in the log was already approved (or needed no approval): it is running
       if (task.exact) {
-        const ask = (task.asks || []).find((t) => t >= p.t - 1500 && t <= now);
-        if (ask) return { kind: 'wait', since: ask, approval: true, tool: p, why: 'approve' };
         if (el > 20 * 60000) return { kind: 'stuck', since: p.t, tool: p, why: 'slow' };
         return { kind: 'work', since: p.t, tool: p };
       }

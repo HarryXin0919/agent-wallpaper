@@ -50,7 +50,8 @@ export const isPermission = (n) => n && (n.notification_type === 'permission_pro
 export class Asks {
   constructor(file = EVENTS) { this.file = file; this.pos = null; this.rest = ''; this.by = new Map(); }
   poll() {
-    let st; try { st = fs.statSync(this.file); } catch { return false; }
+    // no file yet: the hook creates it with its first prompt, so everything written to it from now on is new
+    let st; try { st = fs.statSync(this.file); } catch { if (this.pos === null) this.pos = 0; return false; }
     if (this.pos === null || st.size < this.pos) { this.pos = st.size; return false; }
     if (st.size === this.pos) return false;
     const fd = fs.openSync(this.file, 'r');
@@ -69,4 +70,15 @@ export class Asks {
     return changed;
   }
   for(sessionId) { return this.by.get(sessionId) || []; }
+  // The prompt still open in a session, or null. Claude Code writes the step it asked about only once you answer
+  // (approve, deny or cancel), so a prompt is open from when it was reported until the log gets anything new.
+  // `count` is how many events the session's log has now.
+  open(sessionId, since, count) {
+    const at = this.for(sessionId).filter((t) => t >= since).pop();
+    if (!at) return null;
+    this.seen = this.seen || new Map();
+    let s = this.seen.get(sessionId);
+    if (!s || s.at !== at) { s = { at, count }; this.seen.set(sessionId, s); }
+    return count === s.count ? at : null;
+  }
 }

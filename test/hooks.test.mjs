@@ -41,13 +41,35 @@ test('only permission prompts written after start count', () => {
   assert.equal(a.for('s1').length, 1);
 });
 
-test('with the hook, a pending step waits for approval only after a prompt', () => {
+test('the first prompt counts when the hook creates the events file', () => {
+  const file = path.join(hooks.DIR, 'first.jsonl');
+  const a = new hooks.Asks(file);
+  assert.equal(a.poll(), false); // no file yet
+  fs.writeFileSync(file, JSON.stringify({ session_id: 's2', notification_type: 'permission_prompt', message: 'Claude needs your permission' }) + '\n');
+  assert.equal(a.poll(), true);
+  assert.equal(a.for('s2').length, 1);
+});
+
+test('a prompt stays open until the log gets something new', () => {
+  const a = new hooks.Asks(path.join(hooks.DIR, 'none.jsonl'));
+  a.by.set('s3', [1000]);
+  assert.equal(a.open('s3', 0, 2), 1000); // first seen with 2 events in the log
+  assert.equal(a.open('s3', 0, 2), 1000);
+  assert.equal(a.open('s3', 0, 3), null); // answered: the step reached the log
+  assert.equal(a.open('s3', 2000, 3), null); // older than the task
+  a.by.set('s3', [1000, 5000]);
+  assert.equal(a.open('s3', 0, 3), 5000); // a new prompt
+});
+
+test('with the hook, waiting for approval is exactly while a prompt is open', () => {
   const now = Date.now();
-  const task = { t0: now - 60e3, exact: true, asks: [], ev: [{ t: now - 120e3, k: 'prompt' }, { t: now - 100e3, k: 'tool', kind: 'read', id: 'r1' }] };
-  assert.equal(Scene.stateOf(task, now).kind, 'work'); // 100 s pending, but no prompt was reported
-  task.asks = [now - 90e3];
-  const st = Scene.stateOf(task, now);
-  assert.equal(st.kind, 'wait'); assert.equal(st.approval, true);
-  delete task.exact; delete task.asks;
+  // as Claude Code writes it: while the prompt is open, the log has only the request
+  const task = { t0: now - 60e3, exact: true, ask: now - 30e3, ev: [{ t: now - 60e3, k: 'prompt' }] };
+  let st = Scene.stateOf(task, now);
+  assert.equal(st.kind, 'wait'); assert.equal(st.approval, true); assert.equal(st.since, now - 30e3);
+  // answered: the step is in the log and runs, however long it takes
+  task.ask = null; task.ev.push({ t: now - 31e3, k: 'tool', kind: 'read', id: 'r1' });
+  assert.equal(Scene.stateOf(task, now).kind, 'work');
+  delete task.exact;
   assert.equal(Scene.stateOf(task, now).approval, true); // without the hook: inferred after 8 s
 });

@@ -35,7 +35,7 @@
       case 'think': return ['', l.thinking(dur(now - st.since))];
       case 'work': { const s = label(); return ['', PRIV ? s : s.replace(/^(运行：|Run: )/, l.running)]; }
       case 'wait':
-        if (st.why === 'approve') return ['wait', l.approve(label().replace(/^运行：/, '运行 '))];
+        if (st.why === 'approve') return ['wait', t ? l.approve(label().replace(/^运行：/, '运行 ')) : l.approveAny];
         if (t && t.kind === 'wrap') return ['wait', t.target ? l.doneDecide : l.doneReply];
         return ['wait', t && t.target ? l.waitAnswer : l.waitReply];
       case 'stuck':

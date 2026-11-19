@@ -3,7 +3,7 @@
 (function (root) {
   let lang = 'zh';
   const Z = {
-    thinking: (d) => `正在思考 · ${d}`, running: '正在运行：', approve: (op) => `等你批准：${op}`,
+    thinking: (d) => `正在思考 · ${d}`, running: '正在运行：', approve: (op) => `等你批准：${op}`, approveAny: '等你批准',
     doneDecide: '做完了，等你决定', doneReply: '做完了，等你回复', waitAnswer: '等你回答', waitReply: '等你回复',
     retry: '连不上服务器，正在重试', errors: (n) => `可能卡住了 · 最近 ${n} 步出错`, idle: (d) => `${d}没有动静`,
     interrupted: '被你中断', done: '已完成',
@@ -30,7 +30,7 @@
     places: ['方式一', '方式二', '方式三'],
   };
   const E = {
-    thinking: (d) => `Thinking · ${d}`, running: 'Running: ', approve: (op) => `Needs your approval: ${op}`,
+    thinking: (d) => `Thinking · ${d}`, running: 'Running: ', approve: (op) => `Needs your approval: ${op}`, approveAny: 'Needs your approval',
     doneDecide: 'Done — your call', doneReply: 'Done — waiting for your reply', waitAnswer: 'Waiting for your answer', waitReply: 'Waiting for your reply',
     retry: "Can't reach the server, retrying", errors: (n) => `May be stuck · last ${n} steps failed`, idle: (d) => `No activity for ${d}`,
     interrupted: 'Interrupted', done: 'Done',
@@ -58,7 +58,7 @@
   const OPS = [
     ['运行：给正在运行的命令输入', 'Run: input to a running command'], ['把计划交给你确认', 'Plan for your approval'], ['给另一个会话发消息', 'Message another session'],
     ['在网页里运行脚本', 'Run a script in the page'], ['更新任务清单', 'Update the task list'], ['等子代理做完', 'Wait for subagents'], ['给子代理发消息', 'Message a subagent'],
-    ['连不上服务器，重试中', "Can't reach the server, retrying"], ['做完了，等你回复', 'Done — waiting for your reply'], ['等你回复', 'Waiting for your reply'],
+    ['连不上服务器，重试中', "Can't reach the server, retrying"], ['做完了，等你回复', 'Done — waiting for your reply'], ['等你回复', 'Waiting for your reply'], ['等你批准', 'Needs your approval'],
     ['派出子代理：', 'Subagent: '], ['浏览器打开 ', 'Browser: open '], ['等你决定：', 'Your call: '], ['等你回答：', 'Waiting for your answer: '],
     ['上网搜索“', 'Web search "'], ['操作电脑：', 'Computer: '], ['开新会话：', 'New session: '], ['查看子代理', 'Check subagents'], ['查看图片 ', 'View image '],
     ['查看文件夹', 'List a folder'], ['上网查资料', 'Look it up online'], ['读网页内容', 'Read the page'], ['浏览器截图', 'Browser screenshot'], ['操作网页', 'Use a web page'],
