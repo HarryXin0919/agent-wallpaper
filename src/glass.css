@@ -209,9 +209,6 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: transparent;
 .ul span { font-size: 11px; }
 .ub { height: 7px; margin: 7px 0 6px; border-radius: 99px; background: rgba(255, 255, 255, .14); overflow: hidden; }
 .ub i { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, rgba(255, 255, 255, .7), #fff); }
-.ug.claude .ub i { background: linear-gradient(90deg, rgba(244, 169, 140, .75), #ffd9c9); }
-.ug.codex .ub i { background: linear-gradient(90deg, rgba(143, 193, 255, .75), #d6e9ff); }
-.ug.warm .ub i { background: linear-gradient(90deg, #ffd27a, #ffb84d); } .ug.hot .ub i { background: linear-gradient(90deg, #ffb0c0, #ff7a95); }
 .un { display: flex; justify-content: space-between; align-items: baseline; }
 .un b { font: 600 17px "Segoe UI Variable Display", "Segoe UI", sans-serif; } .un small { font-size: 11.5px; color: var(--dim); }
 .ug.warm .un b { color: var(--wait); } .ug.hot .un b { color: var(--err); }
@@ -227,19 +224,23 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: transparent;
 .notext .usage .ut, .notext .unote, .notext .ul, .notext .un, .notext .us b, .notext .us span, .notext .ttok { visibility: hidden; }
 .col { transition: opacity 1.2s ease; }
 
-/* ---- which assistant: Claude warm coral, Codex cool blue ---- */
+/* ---- which assistant: each source's own color (--c, set per panel from the settings) ---- */
 .brand { flex: none; height: 22px; padding: 0 9px; border-radius: 99px; display: inline-flex; align-items: center;
-  font-size: 11.5px; font-weight: 600; letter-spacing: .2px; white-space: nowrap; }
-.brand.claude { color: var(--claude); background: rgba(244, 169, 140, .14); box-shadow: inset 0 0 0 1px rgba(244, 169, 140, .28); }
-.brand.codex { color: var(--codex); background: rgba(143, 193, 255, .14); box-shadow: inset 0 0 0 1px rgba(143, 193, 255, .30); }
+  font-size: 11.5px; font-weight: 600; letter-spacing: .2px; white-space: nowrap; color: var(--c);
+  background: color-mix(in srgb, var(--c) 14%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 30%, transparent); }
 .top .brand { margin-left: -2px; }
 .orow .brand { height: 18px; padding: 0 7px; font-size: 10.5px; }
 /* a thin colored edge at the top of each task panel */
-.hero.src-claude, .lane.src-claude, .other.src-claude { border-top-color: rgba(244, 169, 140, .55); }
-.hero.src-codex, .lane.src-codex, .other.src-codex { border-top-color: rgba(143, 193, 255, .6); }
-.livewp .hero.src-claude, .livewp .lane.src-claude, .livewp .other.src-claude { border-top-color: rgba(244, 169, 140, .6); }
-.livewp .hero.src-codex, .livewp .lane.src-codex, .livewp .other.src-codex { border-top-color: rgba(143, 193, 255, .65); }
-.bd { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
-.bd.claude { background: var(--claude); } .bd.codex { background: var(--codex); }
+.panel.src, .livewp .panel.src { border-top-color: color-mix(in srgb, var(--c) 60%, transparent); }
+.bd { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; background: var(--c, #fff); }
 .ul .gl { white-space: nowrap; font-size: 12px; }
+.ug .ub i { background: linear-gradient(90deg, color-mix(in srgb, var(--c, #fff) 75%, transparent), color-mix(in srgb, var(--c, #fff) 35%, #fff)); }
+.ug.warm .ub i { background: linear-gradient(90deg, #ffd27a, #ffb84d); } .ug.hot .ub i { background: linear-gradient(90deg, #ffb0c0, #ff7a95); }
 .notext .brand { visibility: visible; }
+
+/* ---- settings: light glass, and motion turned down or off ---- */
+.lightglass .panel { background: linear-gradient(160deg, rgba(40, 48, 62, .38), rgba(24, 30, 40, .32)); }
+.lightglass .col::before { display: none; }
+.calm .status .dot::after, .calm .node.cur::before, .calm .card.live::after, .calm .arrow.live::before, .calm .fill::after { opacity: 0 !important; }
+.calm .card.live::after { opacity: .5 !important; }
+.still * { transition: none !important; }

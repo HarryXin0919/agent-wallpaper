@@ -28,6 +28,7 @@ const html = `<!doctype html><meta charset="utf-8"><style>${fs.readFileSync(path
 <style>.di{position:absolute;width:74px;display:flex;flex-direction:column;align-items:center;gap:5px;z-index:9}.di i{width:46px;height:46px;border-radius:10px;background:linear-gradient(160deg,rgba(255,255,255,.55),rgba(255,255,255,.22));box-shadow:0 2px 6px rgba(0,0,0,.35)}.di span{font:12px "Segoe UI","Microsoft YaHei UI";color:#fff;text-align:center;line-height:1.25;max-height:30px;overflow:hidden;text-shadow:0 1px 3px rgba(0,0,0,.9);word-break:break-all}</style>
 ${icons.map((i) => `<div class="di" style="left:${i.x}px;top:${i.y}px"><i></i><span>${i.n.replace(/[<&]/g, '')}</span></div>`).join('')}
 ${process.env.LIVEWP ? '<script>document.body.classList.add("livewp")</script>' : ''}
+<script>${fs.readFileSync(path.join(here, '../src/i18n.js'), 'utf8')}</script><script>I18N.set(${JSON.stringify(process.env.LANG_UI || 'zh')})</script>
 <script>${fs.readFileSync(path.join(here, '../src/scene.js'), 'utf8')}</script>
 <script>${fs.readFileSync(path.join(here, '../src/flow.js'), 'utf8')}</script>
 <script>${fs.readFileSync(path.join(here, '../src/glass.js'), 'utf8')}</script>

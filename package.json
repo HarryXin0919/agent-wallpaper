@@ -1,7 +1,7 @@
 {
   "name": "agent-wallpaper",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A live desktop wallpaper for Windows that shows what Claude Code and Codex are doing, read from their local session logs.",
   "license": "MIT",
   "author": "Harry Alexander Xin",

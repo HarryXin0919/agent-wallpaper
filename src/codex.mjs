@@ -23,7 +23,7 @@ function strArg(code, key) {
 
 // The statement of a script that says what it does: setup lines ($x = 'value') are skipped, an assignment from a
 // command keeps the command, and long program paths shrink to the program's name (python, node, pwsh).
-function cmdLabel(c) {
+export function cmdLabel(c) {
   const short = (s) => s
     .replace(/^&\s*/, '')
     .replace(/(["'])([A-Za-z]:[\\/][^"']*?[\\/])?([^\\/"']+?)(\.exe)?\1/g, (m, q, dir, base, exe) => (dir || exe ? base : m))

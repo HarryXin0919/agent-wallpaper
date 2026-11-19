@@ -10,6 +10,7 @@
   const rgba = (c, a) => `rgba(${c[0]},${c[1]},${c[2]},${Math.max(0, Math.min(1, a))})`;
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const dur = (ms) => {
+    if (root.I18N) return root.I18N.dur(ms);
     const s = Math.max(0, Math.round(ms / 1000));
     if (s < 60) return `${s} 秒`;
     const m = Math.floor(s / 60);

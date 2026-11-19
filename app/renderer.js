@@ -26,7 +26,27 @@
     if (k !== lastTargets) { lastTargets = k; window.wall.targets(list); }
   }
   window.wall.onWallpaper(setWallpaper);
-  window.wall.hello().then((h) => { if (!h) return; st = h.state; snap = h.data; icons = h.icons; usageData = h.usage || null; if (h.wallpaper) setWallpaper(h.wallpaper); update(); });
+  // the settings that change the picture (language, size, position, privacy, …)
+  let view = { lang: 'zh', position: 'auto', scale: 1, maxTasks: 4, glass: 'auto', motion: 'full', privacy: false, usage: { show: true }, keepDone: 15, waitDone: 2, brands: {} };
+  let liveWall = false;
+  function setView(v) {
+    if (!v) return;
+    view = v; I18N.set(v.lang);
+    document.documentElement.lang = v.lang === 'en' ? 'en' : 'zh-CN';
+    glassClass();
+    document.body.classList.toggle('calm', v.motion !== 'full');
+    document.body.classList.toggle('still', v.motion === 'off');
+    lastHTML = ''; update();
+  }
+  // dark glass over a live wallpaper (or when chosen), light glass when chosen
+  function glassClass() {
+    document.body.classList.toggle('livewp', view.glass === 'dark' || view.glass === 'light' || liveWall);
+    document.body.classList.toggle('lightglass', view.glass === 'light');
+  }
+  window.wall.onView(setView);
+  const takeAll = (h) => { if (!h) return; st = h.state; snap = h.data; icons = h.icons; usageData = h.usage || null; if (h.wallpaper) setWallpaper(h.wallpaper); setView(h.view); update(); };
+  window.wall.onAll(takeAll);
+  window.wall.hello().then(takeAll);
 
   // the wallpaper, plus a blurred copy made once: the glass panels show it lined up with the real one,
   // which looks like live frosted glass without blurring anything every frame
@@ -34,7 +54,7 @@
   function setWallpaper(w) {
     if (!w || !w.url) return;
     // the real wallpaper shows through the window; over a moving one the glass is tinted instead of frosted
-    document.body.classList.toggle('livewp', !!w.live);
+    liveWall = !!w.live; glassClass();
     if (w.live) return;
     const img = new Image();
     img.onload = () => {
@@ -57,48 +77,54 @@
     for (const s of snap) {
       let k = Scene.stateOf(s.task, now);
       // finished and waiting for your reply for over 2 hours: treat as done, so it fades out on its own
-      if (k.kind === 'wait' && !k.approval && now - k.since > 2 * 3600e3) k = { kind: 'done', since: k.since };
+      if (k.kind === 'wait' && !k.approval && now - k.since > view.waitDone * 3600e3) k = { kind: 'done', since: k.since };
       if (k.kind === 'done' && now - k.since > HIDE) continue;
       list.push({ s, k });
     }
     list.sort((a, b) => ((a.k.kind === 'done') - (b.k.kind === 'done')) || b.s.last - a.s.last);
     return list;
   }
-  // a finished task stays clear for 15 minutes, then fades over the next hours
+  // a finished task stays clear for a while (15 minutes unless changed), then fades over the next hours
   function fade(k, now) {
     if (k.kind !== 'done') return 1;
-    const age = now - k.since;
-    if (age < 15 * 60e3) return 1;
-    if (age < 3 * 3600e3) return 1 - 0.6 * (age - 15 * 60e3) / (3 * 3600e3 - 15 * 60e3);
-    return Math.max(0, 0.4 * (1 - (age - 3 * 3600e3) / (HIDE - 3 * 3600e3)));
+    const age = now - k.since, keep = view.keepDone * 60e3, soft = Math.max(keep + 3600e3, 3 * 3600e3);
+    if (age < keep) return 1;
+    if (age < soft) return 1 - 0.6 * (age - keep) / (soft - keep);
+    return Math.max(0, 0.4 * (1 - (age - soft) / Math.max(1, HIDE - soft)));
   }
 
   function update() {
     const now = Date.now();
-    const W = window.innerWidth, H = window.innerHeight;
+    // the page is drawn at the chosen size: everything inside the stage is zoomed, so the space it gets shrinks
+    const z = view.scale || 1;
+    stage.style.zoom = z === 1 ? '' : String(z);
+    const W = window.innerWidth / z, H = window.innerHeight / z;
     const list = pick(now);
     stage.classList.toggle('rest', !!(st.paused || st.covered));
     stage.classList.toggle('notext', st.text === false);
     // usage sits at the top of the empty area; the tasks get the rest
-    const free0 = Glass.freeRect(icons || [], W, H);
-    const UH = usageData ? 214 : 0; // the usage panel is ~196px tall, plus a gap
+    const free0 = region(W, H);
+    const showUsage = usageData && view.usage.show !== false;
+    const UH = showUsage ? 214 : 0; // the usage panel is ~196px tall, plus a gap
     // live use: tokens of all replies in the last 5 minutes, per minute
     let sum = 0; for (const s of snap) for (const r of s.task.rate || []) if (now - r[0] < 5 * 60e3) sum += r[1];
-    const usageHTML = usageData ? `<div class="ucol" data-k="ucol" style="left:${free0.x}px;top:${free0.y + 16}px;width:${free0.w}px">${Glass.usage(usageData, { perMin: sum / 5 }, now)}</div>` : '';
+    const b = view.brands || {}, u = view.usage || {};
+    const uopts = { brands: b, warm: u.warm, hot: u.hot, show: { h5: u.h5 !== false && !(b.claude && b.claude.on === false), week: u.week !== false && !(b.claude && b.claude.on === false), codex: u.codex !== false && !(b.codex && b.codex.on === false) } };
+    const usageHTML = showUsage ? `<div class="ucol" data-k="ucol" style="left:${free0.x}px;top:${free0.y + 16}px;width:${free0.w}px">${Glass.usage(usageData, { perMin: sum / 5 }, now, uopts)}</div>` : '';
     if (!list.length) { const html = usageHTML; if (html !== lastHTML) { const t = document.createElement('div'); t.innerHTML = html; morphChildren(stage, t); lastHTML = html; } sendTargets(); return; }
     // working right now (thinking, running, stuck, or waiting for an approval mid-task); a finished turn
     // that is waiting for your reply is not "working" and stays a small card
-    const working = list.filter((o) => ['think', 'work', 'stuck'].includes(o.k.kind) || (o.k.kind === 'wait' && o.k.approval)).slice(0, 4);
+    const working = list.filter((o) => ['think', 'work', 'stuck'].includes(o.k.kind) || (o.k.kind === 'wait' && o.k.approval)).slice(0, view.maxTasks || 4);
     const free = UH ? { x: free0.x, y: free0.y + UH, w: free0.w, h: free0.h - UH } : free0;
     const tmp = document.createElement('div');
     const small = (skip) => list.filter((o) => !skip.includes(o)).filter((o) => o.k.kind !== 'done' || now - o.k.since < 3 * 3600e3).map((o) => ({ id: o.s.id, title: o.s.title, task: o.s.task }));
     if (working.length >= 2) {
       // several tasks at once: a lane each, so every flow is visible
-      Glass.renderLanes(tmp, working.map((o) => ({ id: o.s.id, task: { ...o.s.task, title: o.s.title } })), now, { free, w: W, h: H, text: st.text, others: small(working) });
+      Glass.renderLanes(tmp, working.map((o) => ({ id: o.s.id, task: { ...o.s.task, title: o.s.title } })), now, { free, w: W, h: H, text: st.text, others: small(working), privacy: view.privacy });
       tmp.dataset.fade = '1';
     } else {
       const main = working[0] || list[0];
-      Glass.render(tmp, { ...main.s.task, title: main.s.title }, now, { free, w: W, h: H, text: st.text, sid: main.s.id, others: small([main]) });
+      Glass.render(tmp, { ...main.s.task, title: main.s.title }, now, { free, w: W, h: H, text: st.text, sid: main.s.id, others: small([main]), privacy: view.privacy });
       tmp.dataset.fade = String(fade(main.k, now));
     }
     // only the task panels fade after a task ends; the usage panel stays
@@ -108,6 +134,13 @@
     if (html !== lastHTML) { morphChildren(stage, tmp); lastHTML = html; markHover(); }
     sendTargets();
     frames++;
+  }
+
+  // where the panels go: the largest space without icons, or a fixed column on the left, middle or right
+  function region(W, H) {
+    if (view.position === 'auto' || !view.position) return Glass.freeRect(icons || [], W, H);
+    const w = Math.min(W - 48, Math.max(780, W * 0.44)), x = view.position === 'left' ? 24 : view.position === 'right' ? W - w - 24 : (W - w) / 2;
+    return { x, y: 24, w, h: H - 94 };
   }
 
   // --- update the page in place: keep nodes that are the same (by data-k), change only what differs ---
@@ -142,7 +175,7 @@
   const ph = (t, ms) => (t % ms) / ms;
   const ease = (x) => 1 - Math.pow(1 - x, 2);
   setInterval(() => {
-    if (st.paused || st.covered) return;
+    if (st.paused || st.covered || view.motion !== 'full') return;
     const t = performance.now();
     const a13 = ph(t, 1300);
     root.setProperty('--a18', ease(ph(t, 1800)).toFixed(3));
@@ -157,5 +190,5 @@
   // once a second for the timers; nothing at all while paused
   setInterval(() => { if (!st.paused) update(); }, 1000);
   window.addEventListener('resize', update);
-  window.__dbg = () => ({ snap: snap.length, icons: icons ? icons.length : null, frames, st, W: innerWidth, H: innerHeight, free: Glass.freeRect(icons || [], innerWidth, innerHeight) });
+  window.__dbg = () => ({ snap: snap.length, icons: icons ? icons.length : null, frames, st, W: innerWidth, H: innerHeight, view, free: region(innerWidth / (view.scale || 1), innerHeight / (view.scale || 1)) });
 })();

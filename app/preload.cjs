@@ -1,4 +1,4 @@
-// What crosses into the page: the timeline data, the on/off switches, icon positions and the wallpaper image.
+// What crosses into the page: the timeline data, the on/off switches, icon positions, the wallpaper image and the settings.
 const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('wall', {
   onData: (fn) => ipcRenderer.on('data', (_e, d) => fn(d)),
@@ -11,4 +11,6 @@ contextBridge.exposeInMainWorld('wall', {
   onClearDone: (fn) => ipcRenderer.on('clearDone', () => fn()),
   onUsage: (fn) => ipcRenderer.on('usage', (_e, u) => fn(u)),
   dismiss: (ids) => ipcRenderer.send('dismiss', ids),
+  onView: (fn) => ipcRenderer.on('view', (_e, v) => fn(v)),
+  onAll: (fn) => ipcRenderer.on('all', (_e, h) => fn(h)),
 });

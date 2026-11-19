@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
+<title>Agent Wallpaper</title>
+<style>
+:root { --bg:#12161d; --side:#0d1015; --card:rgba(255,255,255,.045); --edge:rgba(255,255,255,.09); --text:#eef1f6; --dim:rgba(232,237,245,.62); --ok:#b6f0b9; --warn:#ffd27a; --acc:#f4a98c; }
+* { box-sizing:border-box; margin:0; }
+html, body { height:100%; }
+body { background:var(--bg); color:var(--text); font:13.5px "Segoe UI Variable Text","Segoe UI","Microsoft YaHei UI",sans-serif; display:flex; overflow:hidden; user-select:none; }
+nav { width:200px; flex:none; background:var(--side); padding:22px 12px; display:flex; flex-direction:column; gap:2px; border-right:1px solid var(--edge); }
+.logo { display:flex; align-items:center; gap:10px; padding:0 10px 20px; font-weight:600; font-size:14.5px; }
+.logo i { width:22px; height:22px; border-radius:7px; background:linear-gradient(135deg,#f4a98c,#8fc1ff); }
+nav button { all:unset; padding:9px 12px; border-radius:9px; color:var(--dim); cursor:pointer; }
+nav button:hover { background:rgba(255,255,255,.04); color:var(--text); }
+nav button.on { background:rgba(255,255,255,.08); color:var(--text); font-weight:600; }
+.ver { margin-top:auto; padding:0 12px; font-size:11.5px; color:var(--dim); line-height:1.6; }
+main { flex:1; padding:26px 32px 40px; overflow-y:auto; }
+h1 { font:600 21px "Segoe UI Variable Display","Segoe UI","Microsoft YaHei UI"; }
+.lead { color:var(--dim); margin:6px 0 20px; line-height:1.5; }
+.box { background:var(--card); border:1px solid var(--edge); border-radius:14px; padding:2px 18px; margin-bottom:14px; }
+.row { display:flex; align-items:center; justify-content:space-between; gap:20px; padding:13px 0; border-bottom:1px solid var(--edge); }
+.row:last-child { border-bottom:0; }
+.row .l { min-width:0; } .row .l b { font-weight:600; display:block; } .row .l span { color:var(--dim); font-size:12px; display:block; margin-top:2px; line-height:1.45; }
+.seg { display:flex; background:rgba(255,255,255,.06); border-radius:9px; padding:3px; flex:none; flex-wrap:wrap; justify-content:flex-end; }
+.seg button { all:unset; padding:5px 12px; border-radius:7px; color:var(--dim); font-size:12.5px; cursor:pointer; white-space:nowrap; }
+.seg button:hover { color:var(--text); }
+.seg button.on { background:rgba(255,255,255,.14); color:var(--text); font-weight:600; }
+.sw { all:unset; width:38px; height:22px; border-radius:99px; background:rgba(255,255,255,.18); position:relative; flex:none; cursor:pointer; transition:background .15s; }
+.sw::after { content:""; position:absolute; top:3px; left:3px; width:16px; height:16px; border-radius:50%; background:#fff; transition:left .15s; }
+.sw.on { background:var(--acc); } .sw.on::after { left:19px; }
+.sw:disabled { opacity:.35; cursor:default; }
+.src { display:flex; align-items:center; gap:14px; padding:14px 16px; border-radius:14px; background:var(--card); border:1px solid var(--edge); margin-bottom:10px; }
+.src.off { opacity:.55; }
+.dot { width:12px; height:12px; border-radius:50%; flex:none; box-shadow:0 0 0 4px rgba(255,255,255,.04); }
+.src .n { font-weight:600; font-size:14px; display:flex; align-items:center; gap:8px; }
+.src .s { color:var(--dim); font-size:12px; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.src .s em { color:var(--ok); font-style:normal; } .src .s em.no { color:var(--warn); }
+.grow { flex:1; min-width:0; }
+.chip { font-size:11px; padding:2px 8px; border-radius:99px; background:rgba(255,255,255,.08); color:var(--dim); font-weight:400; }
+.colors { display:flex; gap:6px; flex:none; }
+.colors button { all:unset; width:16px; height:16px; border-radius:50%; cursor:pointer; }
+.colors button.on { outline:2px solid #fff; outline-offset:2px; }
+.del { all:unset; width:24px; height:24px; border-radius:7px; display:grid; place-items:center; color:var(--dim); cursor:pointer; font-size:16px; }
+.del:hover { background:rgba(255,255,255,.08); color:var(--text); }
+.add { all:unset; box-sizing:border-box; width:100%; margin-top:4px; padding:13px 16px; border-radius:14px; border:1px dashed rgba(255,255,255,.22); color:var(--dim); display:flex; gap:10px; align-items:center; cursor:pointer; }
+.add:hover { color:var(--text); border-color:rgba(255,255,255,.4); }
+.add b { font-size:18px; font-weight:400; color:var(--text); }
+.note { color:var(--dim); font-size:12px; margin-top:12px; line-height:1.55; }
+.msg { color:var(--warn); font-size:12px; margin-top:8px; min-height:16px; }
+input[type=range] { width:180px; accent-color:var(--acc); }
+.val { color:var(--dim); font-size:12px; width:42px; text-align:right; }
+.name { all:unset; font-weight:600; font-size:14px; border-bottom:1px dashed transparent; min-width:60px; max-width:220px; }
+.name:focus { border-bottom-color:rgba(255,255,255,.35); }
+.key { all:unset; min-width:170px; text-align:center; padding:6px 12px; border-radius:8px; background:rgba(255,255,255,.07); font:12.5px "Cascadia Mono","Consolas",monospace; cursor:pointer; }
+.key.rec { outline:1px solid var(--acc); color:var(--acc); }
+.key.bad { outline:1px solid var(--warn); }
+.btn { all:unset; padding:7px 14px; border-radius:9px; background:rgba(255,255,255,.1); cursor:pointer; font-size:12.5px; }
+.btn:hover { background:rgba(255,255,255,.16); }
+section[hidden] { display:none; }
+</style>
+</head>
+<body>
+<nav id="nav"></nav>
+<main id="main"></main>
+<script src="../src/i18n.js"></script>
+<script src="settings.js"></script>
+</body>
+</html>

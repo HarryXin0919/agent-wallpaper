@@ -65,7 +65,8 @@ function findDesktop() {
   return { mode: 'classic', parent: worker, defView: 0, worker };
 }
 
-let current = null;
+// one entry per wallpaper window (one per screen)
+const wins = new Map();
 export function attach(hwnd, rect, opts = {}) {
   const d = findDesktop();
   if (!d.parent) return { ok: false, why: 'desktop window not found' };
@@ -88,13 +89,14 @@ export function attach(hwnd, rect, opts = {}) {
   } else {
     W.SetWindowPos(hwnd, 0, x, y, rect.w, rect.h, SWP_NOACTIVATE | SWP_FRAMECHANGED | SWP_SHOWWINDOW);
   }
-  current = { hwnd, ...d, rect };
+  wins.set(Number(hwnd), { hwnd, ...d, rect });
   place(hwnd, rect);
   return { ok: true, mode: d.mode, parent: d.parent, defView: d.defView, worker: d.worker };
 }
 
 // Size the window so its drawable area (not counting any border Windows still gives it) covers the screen.
 export function place(hwnd, rect) {
+  const current = wins.get(Number(hwnd));
   if (!current) return;
   const vx = W.GetSystemMetrics(76), vy = W.GetSystemMetrics(77);
   const after = current.mode === 'raised' ? current.defView : 0, flags = SWP_NOACTIVATE | (current.mode === 'raised' ? 0 : SWP_NOZORDER);
@@ -108,17 +110,19 @@ export function place(hwnd, rect) {
   }
   current.rect = rect;
 }
-export const info = () => current && { mode: current.mode, insets: current.insets };
+export const info = (hwnd) => { const c = hwnd ? wins.get(Number(hwnd)) : [...wins.values()][0]; return c && { mode: c.mode, insets: c.insets }; };
 
 // still sitting where we put it? (Explorer restarts take the desktop windows away)
 export function attached(hwnd) {
+  const current = wins.get(Number(hwnd));
   return !!current && W.IsWindow(hwnd) && W.IsWindow(current.parent) && Number(W.GetParent(hwnd)) === Number(current.parent);
 }
 
 export function detach(hwnd) {
+  const current = wins.get(Number(hwnd));
   if (W.IsWindow(hwnd)) W.SetParent(hwnd, 0);
   if (current && W.IsWindow(current.parent)) W.RedrawWindow(current.parent, null, null, 0x1 | 0x4 | 0x80 | 0x100); // invalidate, erase, allchildren, updatenow
-  current = null;
+  wins.delete(Number(hwnd));
 }
 
 // is a full-screen or maximised window covering the desktop? then there is no need to animate
@@ -152,7 +156,7 @@ export function liveWallpaper() {
   if (!worker) W.EnumWindows((h) => { if (W.FindWindowExW(h, 0, 'SHELLDLL_DefView', null)) worker = W.FindWindowExW(0, h, 'WorkerW', null); return true; }, 0);
   if (!worker) return false;
   let h = 0;
-  while ((h = W.FindWindowExW(worker, h, null, null))) if (W.IsWindowVisible(h) && (!current || Number(h) !== Number(current.hwnd))) return true;
+  while ((h = W.FindWindowExW(worker, h, null, null))) if (W.IsWindowVisible(h) && !wins.has(Number(h))) return true;
   return false;
 }
 

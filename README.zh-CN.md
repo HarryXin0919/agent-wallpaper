@@ -1,6 +1,6 @@
 # Agent Wallpaper
 
-**Windows 动态桌面壁纸：实时显示 Claude Code 和 Codex 正在做的事。**
+**Windows 动态桌面壁纸：实时显示 Claude Code、Codex 和 Cursor 正在做的事。**
 
 [English](README.md)
 
@@ -8,11 +8,11 @@
 
 壁纸位于桌面图标下面，把每个正在进行的任务画成毛玻璃面板：你提出的要求、任务清单形成的进度条，以及它刚刚做过的操作（读了哪些文件、改了几行、运行了什么命令、思考了多久）。最上面的用量面板显示 Claude 和 Codex 套餐额度还剩多少。
 
-程序只读取 Claude Code 和 Codex 在本机写下的会话记录，不修改记录，不改任何系统设置，壁纸窗口本身也不联网。
+程序只读取这些 AI 在本机写下的会话记录，不修改记录，不改任何系统设置，壁纸窗口本身也不联网。
 
 ## 功能
 
-- **Claude 和 Codex 一起显示：** Claude 的任务用珊瑚色标注，Codex 的用浅蓝色。同时有几个任务在做时，每个任务各占一栏。
+- **Claude Code、Codex 和 Cursor 一起显示：** 每个来源有自己的颜色（默认 Claude 珊瑚色、Codex 浅蓝色）。同时有几个任务在做时，每个任务各占一栏。还可以添加其他记录文件夹，比如第二个账号的，或 WSL 里的 Claude Code。
 - **进度一目了然：** 助手自己列的任务清单（Claude 的任务清单、Codex 的计划）显示成进度条，标出当前第几步、这一步做了多久。
 - **每个操作一张卡片：** 读文件、搜索、修改（加了几行、删了几行）、运行命令、子代理、上网、思考时长，最新的在最后，正在进行的那张会发光。
 - **状态：** 正在思考、正在运行命令、等你批准、可能卡住了、已完成。
@@ -20,6 +20,9 @@
 - **点卡片跳转：** 在 Claude 或 Codex 桌面端打开对应的会话。
 - **不挡图标：** 面板只放在桌面最大的空白区域，每 30 秒重新读取一次图标位置。支持 Wallpaper Engine 等动态壁纸；桌面被全屏窗口挡住时自动暂停。
 - **跟随 Claude：** 可以设置成打开 Claude 桌面端时自动出现，退出 Claude 时自动关闭。
+- **通知：** 任务完成、等你批准、额度超过你设的提醒线时，在右下角弹出 Windows 通知。
+- **隐私模式：** 投屏时使用，只显示会话标题和操作类型，不显示提问原文、文件名和命令。
+- **中文或英文，** 显示在主屏幕或所有屏幕，大小、位置、玻璃深浅和动画都可以调。
 
 ## 运行要求
 
@@ -44,6 +47,23 @@ npm run startup:add
 
 不想要了就运行 `npm run startup:remove`。
 
+## 设置
+
+右键托盘图标，选“设置…”（或按 Ctrl + Alt + Shift + S）。每项改动都会立即保存并生效。
+
+![设置窗口](docs/settings.png)
+
+| 页面 | 可以改什么 |
+|---|---|
+| AI 来源 | 开关 Claude Code、Codex 和 Cursor，选每个来源的颜色，添加其他记录文件夹 |
+| 显示 | 语言、位置（自动避开图标，或固定在左 / 中 / 右）、大小、显示在哪块屏幕、同时显示几个任务、玻璃深浅、动画 |
+| 用量 | 显示或隐藏用量面板，以及其中每一项额度 |
+| 行为与提醒 | 跟随 Claude 打开和关闭、完成的任务保留多久、各类通知和额度提醒线 |
+| 隐私 | 隐私模式 |
+| 快捷键 | 每个快捷键都可以改：点一下，再按下新的组合键 |
+
+设置保存在程序文件夹里的 `.runtime/settings.json`。
+
 ## 操作
 
 单击任务栏右下角的托盘图标可以显示或隐藏壁纸，右键打开菜单。
@@ -51,6 +71,7 @@ npm run startup:add
 | 操作 | 快捷键 |
 |---|---|
 | 显示 / 隐藏 | Ctrl + Alt + Shift + W |
+| 设置 | Ctrl + Alt + Shift + S |
 | 暂停 / 继续 | Ctrl + Alt + Shift + P |
 | 隐藏文字（投屏时用） | Ctrl + Alt + Shift + H |
 | 退出 | Ctrl + Alt + Shift + Q |
@@ -65,6 +86,7 @@ npm run startup:add
 |---|---|
 | Claude 任务 | `%USERPROFILE%\.claude\projects\**\*.jsonl` |
 | Codex 任务和 Codex 额度 | `%USERPROFILE%\.codex\sessions\**\rollout-*.jsonl`（Codex 每次回复都会记下当前额度） |
+| Cursor 任务（实验） | `%APPDATA%\Cursor\User\globalStorage\state.vscdb`，只读打开。Cursor 的记录里没有可靠的操作时间，所以按壁纸第一次看到的时间排列 |
 | Claude 额度 | 本机的用量服务（见下文）；没有时用 Claude 桌面端自己的记录 `%APPDATA%\Claude\plan-usage-history.json` |
 | 每个任务的 tokens、实时用量 | 从会话记录里计算 |
 
@@ -86,15 +108,20 @@ npm run startup:add
 |---|---|
 | `src/parse.mjs`、`src/live.mjs` | 跟着 Claude Code 记录的增长实时读取 |
 | `src/codex.mjs` | 把 Codex 记录整理成同样的时间线 |
+| `src/cursor.mjs` | 读取 Cursor 的对话（只读 SQLite） |
 | `src/estimate.mjs` | 两次实测之间估算 Claude 额度 |
+| `src/settings.mjs`、`src/i18n.js` | 设置及默认值；中英文文字 |
 | `src/flow.js`、`src/scene.js` | 按任务清单的步骤分组；判断任务状态 |
 | `src/glass.js`、`src/glass.css` | 毛玻璃面板 |
-| `app/main.mjs` | 托盘、快捷键、监听记录、用量、点击 |
+| `app/main.mjs` | 托盘、快捷键、屏幕、监听记录、用量、通知、点击 |
+| `app/settings.html`、`app/settings.js` | 设置窗口 |
 | `app/desktop.mjs` | Win32：放到图标下面、鼠标、进程检测 |
 | `app/icons.ps1`、`app/watch.ps1`、`app/startup.ps1` | 图标位置；跟随 Claude 打开；开机启动快捷方式 |
 | `tools/demoframe.mjs` | 用虚构的任务渲染 `docs/screenshot.png` |
 
 `tools/` 里的预览工具用 Playwright 渲染静态画面（`npm i -D playwright-core`；Chrome 不在默认位置时设置 `CHROME` 环境变量）。
+
+**不支持：** TRAE 的对话数据库是加密的，无法读取。
 
 ## 声明
 
