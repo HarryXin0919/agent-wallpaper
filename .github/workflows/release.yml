@@ -9,7 +9,19 @@ permissions:
   contents: write
 
 jobs:
+  # one release first, so the Windows and macOS builds both add their files to it (building in parallel without
+  # this, each build created a release of its own)
+  create:
+    runs-on: ubuntu-latest
+    steps:
+      - run: gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1 || gh release create "$TAG" --repo "$REPO" --title "${TAG#v}" --generate-notes --verify-tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
+
   build:
+    needs: create
     strategy:
       fail-fast: false
       matrix:
