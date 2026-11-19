@@ -1,7 +1,7 @@
 {
   "name": "agent-wallpaper",
   "private": true,
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "A live desktop wallpaper for Windows and macOS that shows what Claude Code, Codex, Gemini CLI, DeepSeek Harness and Cursor are doing, read from their local session logs.",
   "license": "MIT",
   "author": "Harry Alexander Xin",
