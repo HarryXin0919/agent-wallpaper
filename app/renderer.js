@@ -39,17 +39,15 @@
     document.body.classList.toggle('still', v.motion === 'off');
     lastHTML = ''; update();
   }
-  // the chosen font goes in front of the usual ones, so characters it lacks still come from the system fonts
-  const faces = new Set(); let fontKey = null;
-  function setFont(f) {
-    const key = f ? f.family + '|' + (f.url || '') : '';
-    if (key === fontKey) return; fontKey = key;
+  // the fonts chosen per language go in front of the usual ones; each covers only its own language's characters,
+  // and characters none of them has still come from the system fonts
+  let baseFF = null;
+  function setFont(list) {
     const st = document.documentElement.style;
-    if (!f) { st.removeProperty('--ff'); st.removeProperty('--ffd'); return; }
-    if (f.url && !faces.has(key)) { faces.add(key); try { const face = new FontFace(f.family, `url("${f.url}")`); document.fonts.add(face); face.load().then(() => { lastHTML = ''; update(); }, () => {}); } catch {} }
-    const base = getComputedStyle(document.documentElement);
-    if (!setFont.ff) setFont.ff = [base.getPropertyValue('--ff'), base.getPropertyValue('--ffd')];
-    st.setProperty('--ff', `"${f.family}", ${setFont.ff[0]}`); st.setProperty('--ffd', `"${f.family}", ${setFont.ff[1]}`);
+    if (!baseFF) { const cs = getComputedStyle(document.documentElement); baseFF = [cs.getPropertyValue('--ff'), cs.getPropertyValue('--ffd')]; }
+    const pre = FontSlots.apply(document, list, () => { lastHTML = ''; update(); });
+    if (!pre) { st.removeProperty('--ff'); st.removeProperty('--ffd'); return; }
+    st.setProperty('--ff', pre + baseFF[0]); st.setProperty('--ffd', pre + baseFF[1]);
   }
   // dark glass over a live wallpaper (or when chosen), light glass when chosen
   function glassClass() {

@@ -46,13 +46,41 @@ test('importing copies the file; other files are refused', () => {
   assert.ok(!fs.existsSync(path.join(dir, 'kept', r.file)));
 });
 
-test('the font setting: only a known choice is kept', () => {
+test('a font per language: only known choices are kept', () => {
   const base = S.load(path.join(os.tmpdir(), 'no-such-settings.json'));
-  assert.equal(base.font, 'system');
-  assert.equal(S.apply(base, { font: 'name:LXGW WenKai' }).font, 'name:LXGW WenKai');
-  assert.equal(S.apply(base, { font: 'name:X"; } body { display: none' }).font, 'name:X  body  display: none');
-  assert.equal(S.apply(base, { font: 'file:gone' }).font, 'system'); // its file was never imported
+  assert.deepEqual(base.font, { latin: 'system', cjk: 'system', ja: 'system', ko: 'system' });
+  assert.equal(S.apply(base, { font: { cjk: 'name:LXGW WenKai' } }).font.cjk, 'name:LXGW WenKai');
+  assert.equal(S.apply(base, { font: { latin: 'name:X"; } body { display: none' } }).font.latin, 'name:X  body  display: none');
+  assert.equal(S.apply(base, { font: { latin: 'file:gone' } }).font.latin, 'system'); // its file was never imported
   const withFont = S.apply(base, { fonts: [{ id: 'f1', name: 'Mine', file: 'f1.otf' }, { id: 'x', name: 'Bad', file: '../../evil.exe' }] });
   assert.deepEqual(withFont.fonts, [{ id: 'f1', name: 'Mine', file: 'f1.otf' }]);
-  assert.equal(S.apply(withFont, { font: 'file:f1' }).font, 'file:f1');
+  assert.equal(S.apply(withFont, { font: { ko: 'file:f1' } }).font.ko, 'file:f1');
+  // the faces of an installed font are kept only while a language uses it
+  const g = S.apply(base, { font: { latin: 'name:Georgia' }, fontFaces: { Georgia: [{ n: 'Georgia', p: 'Georgia', s: 'Regular' }], Other: [{ n: 'Other' }] } });
+  assert.deepEqual(Object.keys(g.fontFaces), ['Georgia']);
+  assert.deepEqual(Object.keys(S.apply(g, { font: { latin: 'system' } }).fontFaces), []);
+});
+
+test('the one font of 0.5.0 becomes the English and the Chinese font', () => {
+  const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'agent-wallpaper-cfg-')), 'settings.json');
+  fs.writeFileSync(file, JSON.stringify({ font: 'name:Georgia' }));
+  assert.deepEqual(S.load(file).font, { latin: 'name:Georgia', cjk: 'name:Georgia', ja: 'system', ko: 'system' });
+});
+
+test('each language gets its own font, limited to its characters, one face per weight', () => {
+  const cfg = S.apply(S.load(path.join(os.tmpdir(), 'no-such-settings.json')), {
+    fonts: [{ id: 'f1', name: 'Kai', file: 'f1.ttf' }],
+    font: { latin: 'name:Georgia', cjk: 'file:f1', ko: 'name:Malgun Gothic' },
+    fontFaces: { Georgia: [{ n: 'Georgia', p: 'Georgia', s: 'Regular' }, { n: 'Georgia Bold', p: 'Georgia-Bold', s: 'Bold' }, { n: 'Georgia Italic', p: 'Georgia-Italic', s: 'Italic' }] },
+  });
+  const v = fonts.slotView(cfg, (f) => 'file:///fonts/' + f.file);
+  assert.deepEqual(v.map((x) => x.key), ['latin', 'ko', 'cjk']); // Japanese is left to the system
+  const latin = v[0];
+  assert.equal(latin.alias, 'AW-latin');
+  assert.ok(latin.range.startsWith('U+0000') && !latin.range.includes('4E00'));
+  assert.deepEqual(latin.faces, [{ src: 'local("Georgia"), local("Georgia")', weight: '400' }, { src: 'local("Georgia Bold"), local("Georgia-Bold")', weight: '700' }]);
+  assert.deepEqual(v[1].faces, [{ src: 'local("Malgun Gothic")' }]); // weights unknown: one face
+  assert.deepEqual(v[2].faces, [{ src: 'url("file:///fonts/f1.ttf")' }]);
+  assert.ok(v[2].range.includes('U+4E00-9FFF'));
+  assert.equal(fonts.weightOf('SemiBold'), 600); assert.equal(fonts.weightOf('Extra Light'), 200); assert.equal(fonts.weightOf('Black'), 900);
 });

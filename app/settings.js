@@ -26,9 +26,10 @@
     cursorNote: 'Cursor 的记录里没有可靠的时间，操作按壁纸第一次看到它们的时间排列。TRAE 的对话记录是加密的，无法读取，所以不支持。',
     look: '显示', lookLead: '改动会立即出现在壁纸上。',
     lang: '语言', langS: '界面文字的语言', auto: '跟随系统',
-    font: '字体', fontS: '面板上文字的字体。所选字体里没有的字（比如中文）会用系统字体补上。', fontDefault: '默认（系统字体）', fontImported: '已导入', fontPicks: '常用', fontAll: '全部已安装',
-    fontAdd: '导入字体…', fontDel: '移除这个字体', fontKept: '导入的字体已复制到本程序的设置文件夹，原文件可以移动或删除。',
-    fontSample: '给设置页加上深色模式 Dark mode', fontSample2: '正在运行：npm test · 72% · 15 分钟',
+    font: '字体', fontS: '每种语言可以分别选字体，各自只管自己的文字；没有选的用系统字体。', fontDefault: '默认（系统字体）', fontImported: '已导入', fontPicks: '常用', fontAll: '全部已安装',
+    slot: { latin: '英文和数字', cjk: '中文', ja: '日文假名', ko: '韩文' }, slotS: { ja: '日文里的汉字跟随中文字体' }, fontMore: '更多语言', fontLess: '收起',
+    fontAdd: '导入字体…', fontFiles: '已导入的字体', fontFilesS: '已复制到本程序的设置文件夹，原文件可以移动或删除。点 × 移除。',
+    fontSample: 'Dark mode 深色模式 · 72%', fontSample2: '正在运行：npm test · 15 分钟', fontSample3: 'かな · カタカナ · 한국어',
     fontErr: { kind: '这个文件不是可用的字体。支持 .ttf、.otf、.woff 和 .woff2。', size: '字体文件超过 60 MB，无法导入。', read: '读取或保存字体文件失败。' },
     pos: '位置', posS: '“自动”会避开桌面图标', posO: { auto: '自动', left: '左', center: '中', right: '右' },
     size: '大小', sizeS: '面板整体缩放',
@@ -83,9 +84,10 @@
     cursorNote: "Cursor's records carry no reliable times, so actions are ordered by when the wallpaper first sees them. TRAE encrypts its conversations, so it cannot be supported.",
     look: 'Display', lookLead: 'Changes show on the wallpaper right away.',
     lang: 'Language', langS: 'Language of the on-screen text', auto: 'System',
-    font: 'Font', fontS: 'The font of the text on the panels. Characters it does not have (often Chinese) still come from the system fonts.', fontDefault: 'Default (system font)', fontImported: 'Imported', fontPicks: 'Common', fontAll: 'All installed',
-    fontAdd: 'Import a font…', fontDel: 'Remove this font', fontKept: 'Imported fonts are copied into this program\'s settings folder; the original file can be moved or deleted.',
-    fontSample: 'Add a dark mode to the settings page 深色模式', fontSample2: 'Running: npm test · 72% · 15 min',
+    font: 'Fonts', fontS: 'Each language can have its own font, which only draws that language; the rest use the system fonts.', fontDefault: 'Default (system font)', fontImported: 'Imported', fontPicks: 'Common', fontAll: 'All installed',
+    slot: { latin: 'English and numbers', cjk: 'Chinese', ja: 'Japanese kana', ko: 'Korean' }, slotS: { ja: 'Kanji follow the Chinese font' }, fontMore: 'More languages', fontLess: 'Fewer',
+    fontAdd: 'Import a font…', fontFiles: 'Imported fonts', fontFilesS: 'Copied into this program\'s settings folder; the original file can be moved or deleted. × removes one.',
+    fontSample: 'Dark mode 深色模式 · 72%', fontSample2: 'Running: npm test · 15 min', fontSample3: 'かな · カタカナ · 한국어',
     fontErr: { kind: 'This file is not a usable font. .ttf, .otf, .woff and .woff2 are supported.', size: 'The font file is over 60 MB and cannot be imported.', read: 'The font file could not be read or saved.' },
     pos: 'Position', posS: '"Auto" keeps clear of desktop icons', posO: { auto: 'Auto', left: 'Left', center: 'Center', right: 'Right' },
     size: 'Size', sizeS: 'Scale of all panels',
@@ -152,42 +154,77 @@
     const places = `<table class="places">${T.places(mac).map(([w, p]) => `<tr><td>${esc(w)}</td><td>${/^[\\/~]/.test(p) ? `<code>${esc(p)}</code>` : esc(p)}</td></tr>`).join('')}</table>${mac ? '' : `<div class="s">${esc(T.wslNote)}</div>`}`;
     return `<div class="guide"><p>${esc(T.guideLead)}</p><ol>${T.steps(mac).map(([h, d, withPlaces], i) => `<li><span class="num">${i + 1}</span><div><b>${esc(h)}</b><div class="s">${esc(d)}</div>${withPlaces ? places : ''}</div></li>`).join('')}</ol></div>`;
   }
-  // --- fonts: the default, imported files, common fonts found on this computer, then every installed font ---
-  const PICKS = ['Microsoft YaHei UI', 'PingFang SC', 'Source Han Sans SC', 'Noto Sans SC', 'HarmonyOS Sans SC', 'MiSans', 'LXGW WenKai', 'Smiley Sans', 'DengXian', 'KaiTi', 'Kaiti SC', 'Songti SC',
-    'Inter', 'Helvetica Neue', 'Avenir Next', 'Bahnschrift', 'Georgia', 'Cascadia Code', 'JetBrains Mono', 'SF Mono', 'Consolas', 'Menlo'];
-  const ZHN = { 'Microsoft YaHei UI': '微软雅黑', 'PingFang SC': '苹方', 'Source Han Sans SC': '思源黑体', 'Noto Sans SC': '思源黑体', 'LXGW WenKai': '霞鹜文楷', 'Smiley Sans': '得意黑', DengXian: '等线', KaiTi: '楷体', 'Kaiti SC': '楷体', 'Songti SC': '宋体' };
+  // --- fonts, one per language: the default, imported files, common fonts found on this computer, then every
+  // installed font that has the language's characters ---
+  const PICKS = {
+    latin: ['Segoe UI', 'Inter', 'Helvetica Neue', 'Avenir Next', 'SF Pro Text', 'Arial', 'Calibri', 'Verdana', 'Bahnschrift', 'Georgia', 'Cambria', 'Times New Roman', 'Cascadia Code', 'JetBrains Mono', 'Consolas', 'Menlo'],
+    cjk: ['Microsoft YaHei UI', 'PingFang SC', 'Source Han Sans SC', 'Noto Sans SC', 'HarmonyOS Sans SC', 'MiSans', 'LXGW WenKai', 'Smiley Sans', 'DengXian', 'KaiTi', 'STKaiti', 'Kaiti SC', 'SimSun', 'Songti SC', 'FangSong', 'Microsoft JhengHei', 'PingFang TC'],
+    ja: ['Yu Gothic UI', 'Yu Gothic', 'Meiryo', 'MS Gothic', 'Hiragino Sans', 'Noto Sans JP', 'Source Han Sans JP'],
+    ko: ['Malgun Gothic', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Source Han Sans KR'],
+  };
+  const PROBE = { cjk: '永国你書', ja: 'あかネノ', ko: '한국어글' }; // characters a font must have to be listed for that language
+  const ZHN = { 'Microsoft YaHei UI': '微软雅黑', 'PingFang SC': '苹方', 'PingFang TC': '苹方（繁体）', 'Source Han Sans SC': '思源黑体', 'Noto Sans SC': '思源黑体', 'LXGW WenKai': '霞鹜文楷', 'Smiley Sans': '得意黑',
+    DengXian: '等线', KaiTi: '楷体', STKaiti: '华文楷体', 'Kaiti SC': '楷体', SimSun: '宋体', 'Songti SC': '宋体', FangSong: '仿宋', 'Microsoft JhengHei': '微软正黑体' };
   const BASE = "'Segoe UI Variable Text', 'Segoe UI', system-ui, 'Microsoft YaHei UI', 'PingFang SC', sans-serif";
-  let picks = null, local = null, asked = false, pen = null;
-  const faces = new Set();
-  // is this font installed? text set in it is a different width than in the fallback font
-  function has(family) {
+  let picks = null, local = null, localFaces = new Map(), asked = false, pen = null, moreFonts = false;
+  const covers = new Map();
+  // how a text looks set in a font list; a font that is missing (or lacks those characters) looks like the fallback
+  function shape(fonts, text) {
     pen = pen || document.createElement('canvas').getContext('2d');
-    const w = (f) => { pen.font = `72px ${f}`; return pen.measureText('mmmwwwlli 你好').width; };
-    return ['monospace', 'serif'].some((g) => w(`"${family}", ${g}`) !== w(g));
+    pen.font = `72px ${fonts}`;
+    const m = pen.measureText(text);
+    return [m.width, m.actualBoundingBoxAscent, m.actualBoundingBoxDescent, m.actualBoundingBoxLeft, m.actualBoundingBoxRight].map((x) => Math.round(x * 10)).join(',');
   }
-  // the full list of installed fonts, where the system lets the page ask for it
+  const differs = (family, text) => ['monospace', 'serif'].some((g) => shape(`"${family}", ${g}`, text) !== shape(g, text));
+  const has = (family) => differs(family, 'mmmwwwlli 你好');
+  function covered(family, slot) {
+    if (!PROBE[slot]) return true;
+    const k = slot + '|' + family;
+    if (!covers.has(k)) covers.set(k, differs(family, PROBE[slot]));
+    return covers.get(k);
+  }
+  // the full list of installed fonts, where the system lets the page ask for it; each family's faces are kept so
+  // the wallpaper can use the real bold and light weights
   async function loadLocal() {
     if (asked || !window.queryLocalFonts) return; asked = true;
-    try { local = [...new Set((await window.queryLocalFonts()).map((f) => f.family))].sort((a, b) => a.localeCompare(b)); } catch { local = []; }
+    try {
+      for (const f of await window.queryLocalFonts()) {
+        if (!localFaces.has(f.family)) localFaces.set(f.family, []);
+        if (!/italic|oblique/i.test(f.style)) localFaces.get(f.family).push({ n: f.fullName, p: f.postscriptName, s: f.style });
+      }
+      local = [...localFaces.keys()].sort((a, b) => a.localeCompare(b));
+    } catch { local = []; }
     if (tab === 'look') draw();
   }
-  function fontBox() {
-    const cur = S.cfg.font || 'system';
-    for (const f of S.fontFiles || []) if (!faces.has(f.family)) { faces.add(f.family); try { const face = new FontFace(f.family, `url("${f.url}")`); document.fonts.add(face); face.load().catch(() => {}); } catch {} }
-    if (!picks) picks = PICKS.filter(has);
-    loadLocal();
+  function fontSelect(slot) {
+    const cur = (S.cfg.font || {})[slot] || 'system';
     const opt = (v, label) => `<option value="${esc(v)}"${v === cur ? ' selected' : ''}>${esc(label)}</option>`;
-    const imported = (S.fontFiles || []).map((f) => opt('file:' + f.id, f.name)).join('');
-    const rest = (local || []).filter((n) => !picks.includes(n));
+    const label = (n) => (S.lang !== 'en' && ZHN[n] ? `${ZHN[n]} · ${n}` : n);
+    const pick = picks[slot];
+    const rest = (local || []).filter((n) => !pick.includes(n) && covered(n, slot));
     const name = cur.startsWith('name:') ? cur.slice(5) : '';
-    const extra = name && !picks.includes(name) && !rest.includes(name) ? opt(cur, name) : ''; // chosen earlier, not in a list now
-    const sel = `<select id="font">${opt('system', T.fontDefault)}${imported ? `<optgroup label="${esc(T.fontImported)}">${imported}</optgroup>` : ''}`
-      + (picks.length || extra ? `<optgroup label="${esc(T.fontPicks)}">${extra}${picks.map((n) => opt('name:' + n, S.lang !== 'en' && ZHN[n] ? `${ZHN[n]} · ${n}` : n)).join('')}</optgroup>` : '')
-      + (rest.length ? `<optgroup label="${esc(T.fontAll)}">${rest.map((n) => opt('name:' + n, n)).join('')}</optgroup>` : '') + '</select>';
-    const fam = name || (cur.startsWith('file:') ? 'AW-' + cur.slice(5) : '');
-    return `<div class="box">${row(T.font, T.fontS, `<div class="ctl">${sel}<button class="btn" id="fontAdd">${esc(T.fontAdd)}</button></div>`)}
-      <div class="sample" style="font-family:${fam ? `&quot;${esc(fam)}&quot;, ` : ''}${BASE}"><b>${esc(T.fontSample)}</b><span>${esc(T.fontSample2)}</span></div>
-      ${cur.startsWith('file:') ? `<div class="row"><div class="l"><span>${esc(T.fontKept)}</span></div><button class="btn" id="fontDel">${esc(T.fontDel)}</button></div>` : ''}</div>${msg ? `<div class="msg" style="margin:-6px 0 12px">${esc(msg)}</div>` : ''}`;
+    const extra = name && !pick.includes(name) && !rest.includes(name) ? opt(cur, name) : ''; // chosen earlier, not in a list now
+    const imported = (S.fontFiles || []).map((f) => opt('file:' + f.id, f.name)).join('');
+    return `<select data-font="${slot}">${opt('system', T.fontDefault)}${imported ? `<optgroup label="${esc(T.fontImported)}">${imported}</optgroup>` : ''}`
+      + (pick.length || extra ? `<optgroup label="${esc(T.fontPicks)}">${extra}${pick.map((n) => opt('name:' + n, label(n))).join('')}</optgroup>` : '')
+      + (rest.length ? `<optgroup label="${esc(T.fontAll)}">${rest.map((n) => opt('name:' + n, label(n))).join('')}</optgroup>` : '')
+      + `<option value="__import">${esc(T.fontAdd)}</option></select>`;
+  }
+  function fontBox() {
+    if (!picks) picks = Object.fromEntries(Object.entries(PICKS).map(([k, list]) => [k, list.filter(has)]));
+    loadLocal();
+    const f = S.cfg.font || {};
+    const more = moreFonts || (f.ja && f.ja !== 'system') || (f.ko && f.ko !== 'system');
+    const slots = more ? ['latin', 'cjk', 'ja', 'ko'] : ['latin', 'cjk'];
+    const pre = window.FontSlots ? FontSlots.apply(document, S.fontView || [], () => { if (tab === 'look') draw(); }) : '';
+    const files = S.fontFiles || [];
+    return `<div class="box">
+      <div class="row"><div class="l"><b>${esc(T.font)}</b><span>${esc(T.fontS)}</span></div></div>
+      ${slots.map((k) => row(T.slot[k], T.slotS[k] || '', fontSelect(k))).join('')}
+      ${more && !moreFonts ? '' : `<div class="row"><div class="l"></div><button class="link" id="fontMore">${esc(more ? T.fontLess : T.fontMore)}</button></div>`}
+      <div class="sample" style="font-family:${esc(pre)}${BASE}"><b>${esc(T.fontSample)}</b><span>${esc(T.fontSample2)}</span>${more ? `<span class="s3">${esc(T.fontSample3)}</span>` : ''}</div>
+      ${files.length ? row(T.fontFiles, T.fontFilesS, `<div class="ctl chips">${files.map((x) => `<button class="btn" data-delfont="${esc(x.id)}">${esc(x.name)} ×</button>`).join('')}</div>`) : ''}
+    </div>${msg ? `<div class="msg" style="margin:-6px 0 12px">${esc(msg)}</div>` : ''}`;
   }
   function look() {
     const c = S.cfg;
@@ -268,8 +305,8 @@
     if (b.dataset.del) { const list = S.cfg.custom.filter((_, i) => i !== +b.dataset.del); return set({ custom: list }); }
     if (b.dataset.key) { recording = recording === b.dataset.key ? null : b.dataset.key; draw(); return; }
     if (b.id === 'test') return window.cfg.testNotify();
-    if (b.id === 'fontAdd') { const r = await window.cfg.importFont(); if (!r) return; merge(r); msg = r.fontError ? T.fontErr[r.fontError] : ''; draw(); return; }
-    if (b.id === 'fontDel') { merge(await window.cfg.removeFont(String(S.cfg.font).slice(5))); msg = ''; draw(); return; }
+    if (b.id === 'fontMore') { moreFonts = !moreFonts; draw(); return; }
+    if (b.dataset.delfont) { merge(await window.cfg.removeFont(b.dataset.delfont)); msg = ''; draw(); return; }
     if (b.id === 'updNow') return window.cfg.checkUpdate();
     if (b.id === 'updInstall') return window.cfg.installUpdate();
     if (b.id === 'updGet') return window.cfg.openReleases();
@@ -285,9 +322,15 @@
     }
   });
   document.addEventListener('input', (e) => { if (e.target.id === 'scale') document.getElementById('scaleV').textContent = e.target.value + '%'; });
-  document.addEventListener('change', (e) => {
+  document.addEventListener('change', async (e) => {
     if (e.target.id === 'scale') return set({ scale: Number(e.target.value) / 100 });
-    if (e.target.id === 'font') { msg = ''; return set({ font: e.target.value }); }
+    if (e.target.dataset.font) {
+      const slot = e.target.dataset.font, v = e.target.value;
+      msg = '';
+      if (v === '__import') { const r = await window.cfg.importFont(slot); if (r) { merge(r); if (r.fontError) msg = T.fontErr[r.fontError]; } draw(); return; }
+      const fam = v.startsWith('name:') ? v.slice(5) : null;
+      return set({ font: { [slot]: v }, ...(fam && localFaces.has(fam) ? { fontFaces: { [fam]: localFaces.get(fam) } } : {}) });
+    }
     if (e.target.dataset.name != null) { const list = S.cfg.custom.map((x) => ({ ...x })); list[+e.target.dataset.name].name = e.target.value.trim() || list[+e.target.dataset.name].name; return set({ custom: list }); }
   });
   // recording a shortcut: modifiers plus one key, in Electron's accelerator form
