@@ -16,7 +16,9 @@ It reads the session logs these assistants already keep on your computer and nev
 - **Progress you can read at a glance.** Every task gets a continuous progress bar with a percentage. When the agent keeps a plan (Claude's task list, Codex's plan, Gemini and DeepSeek todos), finished steps count in full and the current step is credited by how long it has run and how many actions it has had, compared with the steps already done. When there is no plan, the stage is inferred from the actions (looking around, changing files, running checks) and marked as inferred. Several tasks at once keep the order in which they began.
 - **Every action as a card.** Reads, searches, edits (+/− lines), commands, subagents, web lookups and thinking time, newest last; the running one glows.
 - **States:** thinking, running a command, waiting for your approval, maybe stuck, done. Approval waits can be reported exactly by an optional Claude Code hook (below).
-- **Usage panel:** Claude's 5-hour and weekly quota, Codex's quota, tokens used today and a live tokens-per-minute figure.
+- **Usage panel:** Claude's 5-hour and weekly quota, Codex's quota, tokens used today and a live tokens-per-minute figure. When a quota will run out before it resets at the current pace, it says when ("runs out in ~1 h 40 min").
+- **Works with one screen too.** The tray icon shows a blue dot while something is at work and an amber one when something waits for your approval, and its tooltip sums it up. A click on it opens a small panel with the quotas and every task (waiting for you, at work, just finished); a click on a task opens it. **Full view** (Ctrl + Alt + Shift + Space) shows the whole picture over all windows until Esc. **Open the waiting task** (Ctrl + Alt + Shift + J) jumps to the task that has waited longest for you.
+- **A dashboard screen.** Choose a spare screen in the settings and the panels fill it, bigger, without avoiding icons.
 - **Click a card** to open that session in the Claude or Codex desktop app.
 - **Stays out of the way.** Panels go only into the largest empty part of the desktop. It works over Wallpaper Engine and other live wallpapers, and on Windows it pauses when a full-screen window covers the desktop.
 - **Follows the Claude app.** It can appear when the Claude desktop app opens and go away when it closes.
@@ -63,7 +65,7 @@ Right-click the tray icon and choose **Settings…** (or press Ctrl + Alt + Shif
 | Page | What you can change |
 |---|---|
 | AI sources | Turn Claude Code, Codex, Gemini CLI, DeepSeek Harness and Cursor on or off, pick each one's color, add more log folders (a step-by-step guide is built in) |
-| Display | Language, position (auto avoids icons, or left / center / right), size, which screens, a font per language (English and numbers, Chinese, Japanese kana, Korean: any installed font, or import a .ttf / .otf / .woff / .woff2 file), tasks shown at once, glass depth, animation |
+| Display | Language, position (auto avoids icons, or left / center / right), size, which screens, a dashboard screen, a font per language (English and numbers, Chinese, Japanese kana, Korean: any installed font, or import a .ttf / .otf / .woff / .woff2 file), tasks shown at once, glass depth, animation |
 | Usage | Show or hide the usage panel and each quota |
 | Behavior & alerts | Appear with the Claude app and go away when it quits, exact approval waits, how long finished tasks stay, notifications and the quota alert level |
 | Privacy | Privacy mode |
@@ -73,10 +75,12 @@ Right-click the tray icon and choose **Settings…** (or press Ctrl + Alt + Shif
 
 ## Controls
 
-The tray icon: left-click shows or hides the wallpaper; right-click opens the menu.
+The tray icon: left-click opens the panel with the quotas and the tasks; right-click opens the menu.
 
 | Action | Shortcut |
 |---|---|
+| Full view over all windows (Esc closes it) | Ctrl + Alt + Shift + Space |
+| Open the task that waits for you | Ctrl + Alt + Shift + J |
 | Show / hide | Ctrl + Alt + Shift + W |
 | Settings | Ctrl + Alt + Shift + S |
 | Pause / resume | Ctrl + Alt + Shift + P |

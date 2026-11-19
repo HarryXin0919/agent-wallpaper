@@ -33,6 +33,7 @@
     fontErr: { kind: '这个文件不是可用的字体。支持 .ttf、.otf、.woff 和 .woff2。', size: '字体文件超过 60 MB，无法导入。', read: '读取或保存字体文件失败。' },
     pos: '位置', posS: '“自动”会避开桌面图标', posO: { auto: '自动', left: '左', center: '中', right: '右' },
     size: '大小', sizeS: '面板整体缩放',
+    dash: '仪表盘屏幕', dashS: '这块屏幕不避让桌面图标，面板放大铺满，适合闲置的副屏', dashNone: '不用',
     screens: '屏幕', screensS: '显示在哪块屏幕上', primary: '主屏幕', all: '所有屏幕', screenN: (n, s) => `屏幕 ${n} · ${s}`,
     tasks: '同时显示的任务', tasksS: '同时在做的任务超过这个数时，多出来的缩成小卡片',
     glass: '玻璃深浅', glassS: '“自动”在动态壁纸上用深色玻璃', glassO: { auto: '自动', dark: '深', light: '浅' },
@@ -55,7 +56,7 @@
     priv: '隐私模式', privS: '只显示会话标题和操作类型（读取文件、运行命令……），不显示你的提问原文、文件名、命令和回复内容',
     privNote: '只想临时隐藏所有文字时，用“隐藏文字”快捷键。',
     keys: '快捷键', keysLead: '点一下右边的按键，再按下新的组合键。按 Esc 取消。', taken: '这个组合键已被其他程序占用',
-    keyNames: { show: '显示 / 隐藏壁纸', pause: '暂停 / 继续', text: '隐藏 / 显示文字', settings: '打开设置', quit: '退出' },
+    keyNames: { peek: '全屏查看', jump: '打开等你的任务', show: '显示 / 隐藏壁纸', pause: '暂停 / 继续', text: '隐藏 / 显示文字', settings: '打开设置', quit: '退出' },
     press: '请按下组合键…', version: (v) => `版本 ${v}`,
   };
   const EN = {
@@ -91,6 +92,7 @@
     fontErr: { kind: 'This file is not a usable font. .ttf, .otf, .woff and .woff2 are supported.', size: 'The font file is over 60 MB and cannot be imported.', read: 'The font file could not be read or saved.' },
     pos: 'Position', posS: '"Auto" keeps clear of desktop icons', posO: { auto: 'Auto', left: 'Left', center: 'Center', right: 'Right' },
     size: 'Size', sizeS: 'Scale of all panels',
+    dash: 'Dashboard screen', dashS: 'On this screen the panels fill the whole screen, bigger, without avoiding icons: for a spare screen', dashNone: 'None',
     screens: 'Screens', screensS: 'Where the wallpaper appears', primary: 'Main screen', all: 'All screens', screenN: (n, s) => `Screen ${n} · ${s}`,
     tasks: 'Tasks shown at once', tasksS: 'When more tasks are running, the rest become small cards',
     glass: 'Glass', glassS: '"Auto" uses dark glass over live wallpapers', glassO: { auto: 'Auto', dark: 'Dark', light: 'Light' },
@@ -113,7 +115,7 @@
     priv: 'Privacy mode', privS: 'Shows only session titles and kinds of action (read a file, run a command…): no request text, file names, commands or replies',
     privNote: 'To hide all text for a moment, use the "hide text" shortcut.',
     keys: 'Shortcuts', keysLead: 'Click a shortcut, then press the new key combination. Esc cancels.', taken: 'Another program already uses this combination',
-    keyNames: { show: 'Show / hide the wallpaper', pause: 'Pause / resume', text: 'Hide / show text', settings: 'Open settings', quit: 'Quit' },
+    keyNames: { peek: 'Full view', jump: 'Open the waiting task', show: 'Show / hide the wallpaper', pause: 'Pause / resume', text: 'Hide / show text', settings: 'Open settings', quit: 'Quit' },
     press: 'Press a combination…', version: (v) => `Version ${v}`,
   };
   const COLORS = ['#f4a98c', '#8fc1ff', '#b9a2ff', '#9fe6d2', '#ffd27a', '#ff9fb8'];
@@ -236,6 +238,7 @@
         ${row(T.pos, T.posS, seg('position', T.posO, c.position))}
         ${row(T.size, T.sizeS, `<div style="display:flex;gap:12px;align-items:center"><input type="range" min="80" max="140" step="5" value="${Math.round(c.scale * 100)}" id="scale"><span class="val" id="scaleV">${Math.round(c.scale * 100)}%</span></div>`)}
         ${row(T.screens, T.screensS, seg('screens', scr, c.screens))}
+        ${S.displays.length > 1 ? row(T.dash, T.dashS, seg('dashboard', [['none', T.dashNone], ...S.displays.map((d) => [d.id, T.screenN(d.label, d.size)])], c.dashboard)) : ''}
       </div>${fontBox()}<div class="box">
         ${row(T.tasks, T.tasksS, seg('maxTasks', { 1: '1', 2: '2', 3: '3', 4: '4' }, c.maxTasks))}
         ${row(T.glass, T.glassS, seg('glass', T.glassO, c.glass))}

@@ -13,4 +13,7 @@ contextBridge.exposeInMainWorld('wall', {
   dismiss: (ids) => ipcRenderer.send('dismiss', ids),
   onView: (fn) => ipcRenderer.on('view', (_e, v) => fn(v)),
   onAll: (fn) => ipcRenderer.on('all', (_e, h) => fn(h)),
+  // the peek view only: open a session, or close the view
+  peekOpen: (id) => ipcRenderer.send('peek:open', id),
+  peekClose: () => ipcRenderer.send('peek:close'),
 });

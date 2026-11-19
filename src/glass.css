@@ -168,6 +168,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: transparent;
 [data-sid] { transition: transform .25s cubic-bezier(.2, .8, .2, 1), border-color .25s; }
 [data-sid].hover { transform: translateY(-2px); border-color: rgba(255, 255, 255, .45); }
 [data-sid].hover .open { opacity: 1; }
+.peek [data-sid]:hover { transform: translateY(-2px); border-color: rgba(255, 255, 255, .45); } .peek [data-sid]:hover .open { opacity: 1; }
 .other.hover .os::after { content: "  ›"; }
 .notext .open { visibility: hidden; }
 
@@ -215,12 +216,28 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: transparent;
 .uss { display: flex; gap: 10px; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, .1); }
 .us { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .us b { font: 600 16px var(--ffd); white-space: nowrap; }
+.un small.fc { color: var(--wait); opacity: 1; }
+/* the first-run card */
+.welcome { margin-top: 12vh; }
+.welcome .title { margin: 0 0 12px; }
+.welcome .wl { font-size: 15px; line-height: 1.6; }
+.welcome .wl.dim { color: var(--dim); font-size: 13.5px; margin-top: 6px; }
+/* peek: the full picture over the windows, on a dark veil */
+body.peek { background: rgba(8, 10, 14, .8); }
+body.peek .stage { animation: peekin .18s ease-out; }
+@keyframes peekin { from { opacity: 0; transform: scale(.985); } to { opacity: 1; transform: none; } }
+body.peek [data-sid] { cursor: pointer; }
 .us span { font-size: 11px; color: var(--dim); white-space: nowrap; }
 .us.live b { color: #9fe6d2; }
 .us.wk { flex: 0 0 74px; }
 .spark { display: flex; align-items: flex-end; gap: 3px; height: 20px; }
 .spark i { flex: 1; border-radius: 2px; background: rgba(255, 255, 255, .35); } .spark i.now { background: #fff; }
-.ttok { font-size: 12px; color: var(--dim); white-space: nowrap; }
+.ttok { font-size: 12px; color: var(--dim); white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* a narrow lane: the hidden "open in" hint and the token count give way before the status does */
+.lane .top { min-width: 0; overflow: hidden; } .lane .status { min-width: 0; flex: 0 1 auto; } .lane .status span { overflow: hidden; text-overflow: ellipsis; }
+.lane .top .ttok { flex: 0 1000 auto; }
+.lane { container-type: inline-size; }
+@container (max-width: 470px) { .lane .top .ttok { display: none; } } /* a token count cut to "9…" says nothing */ .lane .top .open { flex: 0 1000 auto; min-width: 0; overflow: hidden; white-space: nowrap; }
 .notext .usage .ut, .notext .unote, .notext .ul, .notext .un, .notext .us b, .notext .us span, .notext .ttok { visibility: hidden; }
 .col { transition: opacity 1.2s ease; }
 

@@ -165,6 +165,15 @@
     return { lanes: n, free };
   }
 
+  // the first-run card: shown until the first task has been seen, so an empty desktop does not look broken
+  function welcome(w, free) {
+    const l = L();
+    const found = w.found && w.found.length ? l.welcomeFound(w.found.join(root.I18N.lang === 'en' ? ', ' : '、')) : l.welcomeNone;
+    return `<div class="col v" data-k="col" style="left:${free.x}px;top:${free.y}px;width:${free.w}px;height:${free.h}px">
+      <div class="hero panel welcome" data-k="welcome"><div class="title">${esc(l.welcome)}</div><div class="wl">${esc(l.welcomeSub)}</div>
+      <div class="wl dim">${esc(found)}</div>${w.peek ? `<div class="wl dim">${esc(l.welcomeKeys(w.peek))}</div>` : ''}</div></div>`;
+  }
+
   // another session, kept small: its request, a thin progress bar and what it is doing
   function mini(o, now) {
     const l = L(), st = root.Scene.stateOf(o.task, now), b = BR(o.task);
@@ -189,11 +198,13 @@
     opts = opts || {};
     const l = L(), br = opts.brands || {}, sh = opts.show || {};
     const bc = br.claude || { name: 'Claude', color: '#f4a98c' }, bx = br.codex || { name: 'Codex', color: '#8fc1ff' };
-    const gauge = (b, label, pct, resetS, est) => {
+    const fcs = u.forecast || {};
+    // fc: the quota runs out before it resets at the current pace (src/forecast.mjs); then that is said instead of "used"
+    const gauge = (b, label, pct, resetS, est, fc) => {
       const head = `<div class="ul"><span class="gl"><i class="bd"></i>${esc(b.name)} · ${esc(label)}</span><span>${resetS != null ? esc(root.I18N.reset(resetS)) : ''}</span></div>`;
       if (pct == null) return `<div class="ug" style="${cvar(b)}">${head}<div class="ub"><i style="width:0%"></i></div><div class="un"><b>—</b></div></div>`;
       const left = Math.max(0, 100 - pct), cls = pct >= (opts.hot || 95) ? ' hot' : pct >= (opts.warm || 80) ? ' warm' : '';
-      return `<div class="ug${cls}" style="${cvar(b)}">${head}<div class="ub"><i style="width:${Math.min(100, pct)}%"></i></div><div class="un"><b>${est ? esc(l.about) : ''}${esc(l.left(Math.round(left)))}</b><small>${esc(l.used(Math.round(pct)))}</small></div></div>`;
+      return `<div class="ug${cls}" style="${cvar(b)}">${head}<div class="ub"><i style="width:${Math.min(100, pct)}%"></i></div><div class="un"><b>${est ? esc(l.about) : ''}${esc(l.left(Math.round(left)))}</b>${fc && fc.beforeReset && pct < 100 ? `<small class="fc">${esc(l.runsOut(root.I18N.mins(fc.outAt - now)))}</small>` : `<small>${esc(l.used(Math.round(pct)))}</small>`}</div></div>`;
     };
     const p = u.plan || {}, cx = u.codex || null, est = p.src === 'est';
     const days = (u.week && u.week.days) || [];
@@ -203,11 +214,11 @@
     const ago = p.t ? root.I18N.ago(now - p.t) : '';
     const note = p.src === 'live' ? '' : est ? (now - p.t > 6 * 3600e3 ? l.estOld(ago) : l.estNote(ago)) : p.t ? l.appNote(ago) : u.serviceErr ? l.noQuota : '';
     const gs = [];
-    if (sh.h5 !== false) gs.push(gauge(bc, l.h5, p.fh, p.fhReset, est));
-    if (sh.week !== false) gs.push(gauge(bc, l.week, p.sd, p.sdReset, est));
+    if (sh.h5 !== false) gs.push(gauge(bc, l.h5, p.fh, p.fhReset, est, fcs.fh));
+    if (sh.week !== false) gs.push(gauge(bc, l.week, p.sd, p.sdReset, est, fcs.sd));
     if (cx && sh.codex !== false) {
-      if (cx.short) gs.push(gauge(bx, l.h5, cx.short.pct, cx.short.resetS));
-      gs.push(gauge(bx, l.week, cx.week ? cx.week.pct : null, cx.week ? cx.week.resetS : null));
+      if (cx.short) gs.push(gauge(bx, l.h5, cx.short.pct, cx.short.resetS, false, fcs.cxs));
+      gs.push(gauge(bx, l.week, cx.week ? cx.week.pct : null, cx.week ? cx.week.resetS : null, false, fcs.cxw));
     }
     return `<div class="usage panel" data-k="usage">
       <div class="uhead"><span class="ut">${esc(l.usage)}</span>${note ? `<span class="unote">${esc(note)}</span>` : ''}</div>
@@ -251,5 +262,5 @@
     }
     return { x: best.x, y: best.y, w: best.w, h: best.h };
   }
-  root.Glass = { render, renderLanes, freeRect, mini, usage, fmtTok };
+  root.Glass = { welcome, render, renderLanes, freeRect, mini, usage, fmtTok };
 })(typeof window !== 'undefined' ? window : globalThis);

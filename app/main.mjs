@@ -19,6 +19,7 @@ import * as S from '../src/settings.mjs';
 import * as hooks from '../src/hooks.mjs';
 import * as fonts from '../src/fonts.mjs';
 import { createUpdater } from './update.mjs';
+import { forecast, record, SPANS } from '../src/forecast.mjs';
 import '../src/scene.js';  // Scene.stateOf, for notifications
 import '../src/i18n.js';   // I18N
 import desk from './platform.mjs'; // Windows or macOS desktop layer
@@ -102,13 +103,14 @@ function pollAll() {
 // switch to the next one. The choice is remembered in this program's own folder.
 const PLACES = [{ layered: true, inWorker: false }, { layered: false, inWorker: false }, { layered: false, inWorker: true }];
 const PREFS = path.join(app.getPath('userData'), 'prefs.json');
-let place = 0;
-try { place = JSON.parse(fs.readFileSync(PREFS, 'utf8')).place || 0; } catch {}
+let place = 0, prefs = {};
+try { prefs = JSON.parse(fs.readFileSync(PREFS, 'utf8')) || {}; place = prefs.place || 0; } catch {}
+function savePrefs() { try { fs.mkdirSync(path.dirname(PREFS), { recursive: true }); fs.writeFileSync(PREFS, JSON.stringify({ ...prefs, place })); } catch {} }
 if (process.env.WALL_PLACE) place = Number(process.env.WALL_PLACE);
 place = Math.max(0, Math.min(PLACES.length - 1, place));
 function nextPlace() {
   place = (place + 1) % PLACES.length;
-  try { fs.mkdirSync(path.dirname(PREFS), { recursive: true }); fs.writeFileSync(PREFS, JSON.stringify({ place })); } catch {}
+  savePrefs();
   menu();
   for (const r of [...wins.values()]) closeWin(r); // they are built again by syncWindows
   setTimeout(syncWindows, 800);
@@ -119,9 +121,13 @@ function nextPlace() {
 const wins = new Map(); // display id -> { id, display, rect, win, targets, hover, covered, icons, attach }
 function displaysWanted() {
   const all = screen.getAllDisplays();
-  if (cfg.screens === 'all') return all;
-  if (cfg.screens !== 'primary') { const d = all.find((x) => String(x.id) === String(cfg.screens)); if (d) return [d]; }
-  return [screen.getPrimaryDisplay()];
+  let want = [screen.getPrimaryDisplay()];
+  if (cfg.screens === 'all') want = all;
+  else if (cfg.screens !== 'primary') { const d = all.find((x) => String(x.id) === String(cfg.screens)); if (d) want = [d]; }
+  // the dashboard screen always shows it, whichever screens are chosen
+  const dash = cfg.dashboard !== 'none' && all.find((x) => String(x.id) === String(cfg.dashboard));
+  if (dash && !want.some((x) => x.id === dash.id)) want = [...want, dash];
+  return want;
 }
 // a screen's rectangle in the units the mouse and the desktop layer use: real pixels on Windows, points on macOS
 function rectOf(d) {
@@ -131,7 +137,10 @@ function rectOf(d) {
 const hwnd = (r) => desk.hwndOf(r.win.getNativeWindowHandle());
 const live = (r) => r.win && !r.win.isDestroyed();
 function sendTo(r, ch, data) { if (live(r)) r.win.webContents.send(ch, data); }
-function send(ch, data) { for (const r of wins.values()) sendTo(r, ch, data); }
+function send(ch, data) {
+  for (const r of wins.values()) sendTo(r, ch, data);
+  for (const w of [panelWin, peekWin]) if (w && !w.isDestroyed()) w.webContents.send(ch, data); // the pop-up panel and the peek view
+}
 const recOf = (wc) => [...wins.values()].find((r) => live(r) && r.win.webContents.id === wc.id);
 
 function createWindow(d) {
@@ -251,7 +260,10 @@ function dismiss(ids) {
 }
 ipcMain.on('dismiss', (_e, ids) => { if (Array.isArray(ids) && ids.length) dismiss(ids); });
 const visibleSnap = () => snapAll().filter((s) => !(dismissed[s.id] && s.last <= dismissed[s.id]));
-function pushData() { const d = visibleSnap(); send('data', d); watchStates(d); }
+function pushData() {
+  const d = visibleSnap(); send('data', d); watchStates(d); trayStatus(d);
+  if (!prefs.seenTask && d.length) { prefs.seenTask = true; savePrefs(); send('view', view()); } // the welcome card has done its job
+}
 
 // ---------------------------------------------------------------------------------------------------------------
 // Plan usage and token use (local only).
@@ -289,8 +301,27 @@ async function refreshUsage() {
     } catch (err) { log('estimate failed', String(err)); }
   }
   u.codex = codexNow();
-  usage = u; usageBusy = false; send('usage', usage); quotaAlerts();
+  forecastUsage(u);
+  usage = u; usageBusy = false; send('usage', usage); quotaAlerts(); trayStatus();
   log('usage', { plan: u.plan && u.plan.src, today: !!u.today, err: u.serviceErr });
+}
+// How fast each quota is being used, and whether it runs out before it resets (src/forecast.mjs). The readings are
+// kept in this program's own folder, so the weekly pace survives a restart.
+const HISTORY = path.join(app.getPath('userData'), 'usage-history.json');
+let hist = {}, histSaved = 0;
+try { hist = JSON.parse(fs.readFileSync(HISTORY, 'utf8')) || {}; } catch {}
+function forecastUsage(u) {
+  const now = Date.now(), p = u.plan || {}, cx = u.codex || {}, at = (sec) => (sec != null ? now + sec * 1000 : null);
+  const quotas = [['fh', p.fh, SPANS.h5, p.fhReset], ['sd', p.sd, SPANS.week, p.sdReset],
+    ['cxs', cx.short && cx.short.pct, SPANS.h5, cx.short && cx.short.resetS], ['cxw', cx.week && cx.week.pct, SPANS.week, cx.week && cx.week.resetS]];
+  u.forecast = {};
+  for (const [k, v, span, reset] of quotas) {
+    if (v == null) continue;
+    record(hist, k, now, v);
+    const f = forecast(hist[k], now, span, v, at(reset));
+    if (f) u.forecast[k] = f;
+  }
+  if (now - histSaved > 10 * 60e3) { histSaved = now; try { fs.writeFileSync(HISTORY, JSON.stringify(hist)); } catch {} }
 }
 // Codex quota and today's tokens, straight from its logs (it records its limits with every reply)
 function codexNow() {
@@ -408,13 +439,21 @@ const FONTS = path.join(app.getPath('userData'), 'fonts'); // copies of imported
 const fontUrl = (f) => pathToFileURL(path.join(FONTS, f.file)).href;
 const fontFiles = () => cfg.fonts.map((f) => ({ ...f, family: 'AW-' + f.id, url: fontUrl(f) }));
 const fontView = () => fonts.slotView(cfg, fontUrl); // the fonts chosen per language (src/fonts.mjs)
+// the sources found on this computer, for the first-run card and the pop-up panel
+function foundNames() {
+  const info = sourceInfo();
+  return [['claude', 'Claude Code'], ['codex', 'Codex'], ['gemini', 'Gemini CLI'], ['deepseek', 'DeepSeek Harness'], ['cursor', 'Cursor']]
+    .filter(([k]) => info[k] && info[k].found && cfg.sources[k] && cfg.sources[k].on).map(([, n]) => n);
+}
 const view = () => ({
   font: fontView(),
+  welcome: prefs.seenTask ? null : { found: foundNames(), peek: cfg.keys.peek },
   lang: I18N.lang, position: cfg.position, scale: cfg.scale, maxTasks: cfg.maxTasks, glass: cfg.glass, motion: cfg.motion, privacy: cfg.privacy,
   usage: cfg.usage, keepDone: cfg.keepDone, waitDone: cfg.waitDone,
   brands: { claude: { name: 'Claude', color: cfg.sources.claude.color, on: cfg.sources.claude.on }, codex: { name: 'Codex', color: cfg.sources.codex.color, on: cfg.sources.codex.on } },
 });
-const stateMsg = (r) => ({ paused, text: showText, covered: r ? r.covered : false });
+// a screen chosen as the dashboard: no icons to avoid, bigger panels
+const stateMsg = (r) => ({ paused, text: showText, covered: r ? r.covered : false, dashboard: !!(r && cfg.dashboard !== 'none' && String(r.id) === String(cfg.dashboard)) });
 const helloFor = (r) => ({ data: visibleSnap(), state: stateMsg(r), icons: r && r.icons, wallpaper, usage, view: view() });
 ipcMain.handle('hello', (e) => helloFor(recOf(e.sender)));
 function pushState() { for (const r of wins.values()) sendTo(r, 'state', stateMsg(r)); }
@@ -498,6 +537,7 @@ function applyCfg(prev) {
   if (ch('sources') || ch('custom')) { buildSources(); pollAll(); codexUsage(); }
   if (ch('screens')) syncWindows();
   if (ch('keys')) registerKeys();
+  if (ch('dashboard')) { syncWindows(); pushState(); }
   if (ch('updates') && up) up.schedule(cfg.updates.check);
   menu();
   send('view', view());
@@ -544,12 +584,137 @@ function updateItem(l) {
   if (u.status === 'checking') return [{ label: l.upChecking, enabled: false }];
   return [{ label: l.upCheck, click: () => up.check(true) }];
 }
+// ---------------------------------------------------------------------------------------------------------------
+// At a glance without the desktop: the tray icon's colour and tooltip, a pop-up panel from the tray, a full view over
+// all windows on a shortcut ("peek"), and a shortcut to the task that waits for you.
+
+// where things stand: how many tasks are at work, which wait for an approval, which for a reply
+function standing(list = visibleSnap(), now = Date.now()) {
+  const s = { work: 0, approve: [], reply: [] };
+  for (const x of list) {
+    const k = Scene.stateOf(x.task, now);
+    if (k.kind === 'done') continue;
+    if (k.kind === 'wait' && !k.approval) { if (now - k.since <= cfg.waitDone * 3600e3) s.reply.push({ id: x.id, since: k.since }); continue; }
+    if (k.kind === 'wait') s.approve.push({ id: x.id, since: k.since }); else s.work++;
+  }
+  s.approve.sort((a, b) => a.since - b.since); s.reply.sort((a, b) => a.since - b.since);
+  return s;
+}
+// the tray icon with a dot: blue while something is at work, amber when something waits for your approval
+const trayImgs = {};
+function trayImage(kind) {
+  if (trayImgs[kind]) return trayImgs[kind];
+  const base = nativeImage.createFromPath(path.join(here, '..', 'assets', MAC ? 'tray-16.png' : 'tray.png'));
+  if (kind === 'idle' || MAC) return (trayImgs[kind] = base); // macOS shows a count next to the icon instead
+  const { width: w, height: h } = base.getSize(), px = Buffer.from(base.toBitmap());
+  const fill = kind === 'approve' ? [0x3c, 0xc9, 0xff] : [0xff, 0xb6, 0x6f]; // BGR of #ffc93c and #6fb6ff
+  const ring = [0x27, 0x1f, 0x1b], cx = w * 0.74, cy = h * 0.74, r = w * 0.25;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy), a = Math.max(0, Math.min(1, r + 0.5 - d));
+    if (!a) continue;
+    const c = d <= r - w * 0.07 ? fill : ring, i = (y * w + x) * 4; // a dark rim keeps the dot visible on a light taskbar
+    for (let ch = 0; ch < 3; ch++) px[i + ch] = Math.round(c[ch] * a + px[i + ch] * (1 - a));
+    px[i + 3] = Math.round(255 * a + px[i + 3] * (1 - a));
+  }
+  return (trayImgs[kind] = nativeImage.createFromBitmap(px, { width: w, height: h }));
+}
+function trayTip(s) {
+  const l = t();
+  if (!shown) return l.tipHidden;
+  const parts = [];
+  if (s.approve.length) parts.push(l.tipApprove(s.approve.length));
+  if (s.work) parts.push(l.tipRun(s.work));
+  if (s.reply.length) parts.push(l.tipReply(s.reply.length));
+  const lines = ['Agent Wallpaper' + (paused ? ' · ' + l.tipPausedShort : ''), parts.length ? parts.join(' · ') : l.tipNone];
+  const p = usage && usage.plan, f = usage && usage.forecast && usage.forecast.fh;
+  if (p && p.fh != null) lines.push(l.tipQuota(Math.round(Math.max(0, 100 - p.fh))) + (f && f.beforeReset ? ' · ' + l.runsOut(I18N.mins(f.outAt - Date.now())) : ''));
+  return lines.join('\n').slice(0, 127);
+}
+let trayKind = 'idle';
+function trayStatus(list) {
+  if (!tray) return;
+  const s = standing(list), kind = s.approve.length ? 'approve' : s.work ? 'work' : 'idle';
+  if (kind !== trayKind) { trayKind = kind; tray.setImage(trayImage(kind)); }
+  if (MAC) tray.setTitle(s.approve.length ? ` ${s.approve.length}!` : s.work ? ` ${s.work}` : '');
+  tray.setToolTip(trayTip(s));
+  if (panelWin && !panelWin.isDestroyed()) panelWin.webContents.send('standing', s);
+}
+
+// the pop-up panel, next to the tray icon; it hides when it loses the focus
+const PANEL_W = 380;
+let panelWin = null, panelH = 420, panelHidAt = 0;
+function placePanel() {
+  const b = tray ? tray.getBounds() : null;
+  const pt = b && b.width ? { x: b.x + b.width / 2, y: b.y + b.height / 2 } : screen.getCursorScreenPoint();
+  const wa = screen.getDisplayNearestPoint(pt).workArea, H = Math.min(panelH, wa.height - 16);
+  const x = Math.round(Math.max(wa.x + 8, Math.min(pt.x - PANEL_W / 2, wa.x + wa.width - PANEL_W - 8)));
+  const y = Math.round(pt.y < wa.y + wa.height / 2 ? wa.y + 8 : wa.y + wa.height - H - 8); // under a top menu bar, else above the taskbar
+  panelWin.setBounds({ x, y, width: PANEL_W, height: H });
+}
+const panelHello = () => ({ data: visibleSnap(), usage, view: view(), keys: cfg.keys, found: foundNames(), standing: standing() });
+function togglePanel() {
+  if (panelWin && !panelWin.isDestroyed() && panelWin.isVisible()) { panelWin.hide(); return; }
+  if (Date.now() - panelHidAt < 250) return; // this click is the one that took its focus away
+  if (panelWin && !panelWin.isDestroyed()) { panelWin.webContents.send('panel:all', panelHello()); placePanel(); panelWin.show(); panelWin.focus(); return; }
+  panelWin = new BrowserWindow({
+    width: PANEL_W, height: panelH, show: false, frame: false, resizable: false, movable: false, minimizable: false, maximizable: false, fullscreenable: false,
+    skipTaskbar: true, alwaysOnTop: true, transparent: true, backgroundColor: '#00000000', hasShadow: false, title: 'Agent Wallpaper',
+    webPreferences: { preload: path.join(here, 'panel-preload.cjs'), contextIsolation: true, sandbox: true, spellcheck: false },
+  });
+  panelWin.setMenu(null);
+  panelWin.loadFile(path.join(here, 'panel.html'));
+  panelWin.on('blur', () => { if (!process.env.WALL_PANEL_STAY && panelWin && !panelWin.isDestroyed()) { panelHidAt = Date.now(); panelWin.hide(); } });
+  panelWin.once('ready-to-show', () => { placePanel(); panelWin.show(); panelWin.focus(); });
+  panelWin.on('closed', () => { panelWin = null; });
+}
+const fromPanel = (e) => panelWin && !panelWin.isDestroyed() && e.sender === panelWin.webContents;
+ipcMain.handle('panel:hello', (e) => (fromPanel(e) ? panelHello() : null));
+ipcMain.on('panel:size', (e, h) => { if (!fromPanel(e) || !Number.isFinite(h)) return; panelH = Math.max(160, Math.min(680, Math.ceil(h))); if (panelWin.isVisible()) placePanel(); });
+ipcMain.on('panel:open', (e, id) => { if (!fromPanel(e) || typeof id !== 'string') return; panelWin.hide(); openSession(id); });
+ipcMain.on('panel:act', (e, what) => {
+  if (!fromPanel(e)) return;
+  panelWin.hide();
+  ({ peek: togglePeek, settings: openSettings, jump, show: () => setShown(!shown) }[what] || (() => {}))();
+});
+
+// peek: the full picture over all windows on the screen under the mouse, until Esc, a click outside the panels,
+// the shortcut again, or switching to another window
+let peekWin = null;
+function togglePeek() {
+  if (peekWin && !peekWin.isDestroyed()) { peekWin.close(); return; }
+  const d = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
+  peekWin = new BrowserWindow({
+    x: d.bounds.x, y: d.bounds.y, width: d.bounds.width, height: d.bounds.height, show: false, frame: false, transparent: true, backgroundColor: '#00000000',
+    skipTaskbar: true, resizable: false, movable: false, minimizable: false, maximizable: false, fullscreenable: false, hasShadow: false, alwaysOnTop: true, title: 'Agent Wallpaper',
+    webPreferences: { preload: path.join(here, 'preload.cjs'), contextIsolation: true, sandbox: true, backgroundThrottling: false, spellcheck: false },
+  });
+  peekWin.setAlwaysOnTop(true, 'screen-saver');
+  if (MAC) peekWin.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  peekWin.setMenu(null);
+  peekWin.loadFile(path.join(here, 'index.html'), { query: { peek: '1' } });
+  if (process.env.WALL_LOG) peekWin.webContents.on('console-message', (e) => log('peek page', e.level, e.message));
+  peekWin.once('ready-to-show', () => { peekWin.show(); peekWin.focus(); });
+  peekWin.on('blur', () => { if (!process.env.WALL_PEEK_STAY && peekWin && !peekWin.isDestroyed()) peekWin.close(); });
+  peekWin.on('closed', () => { peekWin = null; });
+}
+const fromPeek = (e) => peekWin && !peekWin.isDestroyed() && e.sender === peekWin.webContents;
+ipcMain.on('peek:close', (e) => { if (fromPeek(e)) peekWin.close(); });
+ipcMain.on('peek:open', (e, id) => { if (!fromPeek(e) || typeof id !== 'string') return; peekWin.close(); openSession(id); });
+
+// the task that has waited longest for you: an approval first, then a reply
+function jump() {
+  const s = standing(), w = s.approve[0] || s.reply[0];
+  if (w) openSession(w.id); else notify('Agent Wallpaper', t().jumpNone);
+}
+
+let trayMenu = null;
 function menu() {
   if (!tray) return;
-  const l = t();
-  tray.setToolTip(!shown ? l.tipHidden : paused ? l.tipPaused : l.tipOn);
-  const k = cfg.keys;
-  tray.setContextMenu(Menu.buildFromTemplate([
+  const l = t(), k = cfg.keys, s = standing(), waiting = s.approve.length + s.reply.length;
+  trayMenu = Menu.buildFromTemplate([
+    { label: l.peek, accelerator: k.peek, registerAccelerator: false, click: togglePeek },
+    ...(waiting ? [{ label: l.jumpTo(waiting), accelerator: k.jump, registerAccelerator: false, click: jump }] : []),
+    { type: 'separator' },
     { label: shown ? l.hide : l.show, accelerator: k.show, registerAccelerator: false, click: () => setShown(!shown) },
     { label: l.settings, accelerator: k.settings, registerAccelerator: false, click: openSettings },
     ...updateItem(l),
@@ -563,13 +728,15 @@ function menu() {
     { label: l.place(l.places[place]), click: nextPlace },
     { type: 'separator' },
     { label: l.quit, accelerator: k.quit, registerAccelerator: false, click: quit },
-  ]));
+  ]);
+  if (!MAC) tray.setContextMenu(trayMenu); // macOS: the menu is opened by a right click only (a left click opens the panel)
+  trayStatus();
 }
 let keysOk = {};
 let up = null; // updates from GitHub Releases (app/update.mjs)
 function registerKeys() {
   globalShortcut.unregisterAll();
-  const acts = { show: () => setShown(!shown), pause: () => setPaused(!paused), text: () => setText(!showText), settings: openSettings, quit };
+  const acts = { show: () => setShown(!shown), peek: togglePeek, jump, pause: () => setPaused(!paused), text: () => setText(!showText), settings: openSettings, quit };
   keysOk = {};
   for (const [name, fn] of Object.entries(acts)) { const key = cfg.keys[name]; if (!key) continue; try { keysOk[name] = globalShortcut.register(key, fn); } catch { keysOk[name] = false; } }
   log('shortcuts', keysOk);
@@ -598,7 +765,9 @@ app.whenReady().then(() => {
 
   if (MAC && app.dock) app.dock.hide(); // a menu-bar program, no Dock icon
   tray = new Tray(nativeImage.createFromPath(path.join(here, '..', 'assets', MAC ? 'tray-16.png' : 'tray.png')));
-  tray.on('click', () => setShown(!shown)); // left click: on / off; right click: the menu
+  tray.on('click', togglePanel); // left click: the pop-up panel; right click: the menu
+  if (MAC) tray.on('right-click', () => trayMenu && tray.popUpContextMenu(trayMenu));
+  setInterval(() => trayStatus(), 5000); // waits for an approval are also inferred from time passing
   registerKeys(); menu();
   let lastStatus = null;
   up = createUpdater({ log, notify, text: t, onChange: (u) => {
@@ -608,6 +777,8 @@ app.whenReady().then(() => {
   up.schedule(cfg.updates.check);
   menu();
   if (process.env.WALL_FONT) log('font import', addFont(process.env.WALL_FONT, process.env.WALL_FONT_SLOT || 'cjk')); // for testing: import this font file for a language
+  if (process.env.WALL_PANEL) setTimeout(togglePanel, 1500); // for testing: open the pop-up panel
+  if (process.env.WALL_PEEK) setTimeout(togglePeek, 1500); // for testing: open the peek view
   if (process.env.WALL_SETTINGS) { // for testing; a page name (ai, look, usage, behave, privacy, keys) opens that page
     openSettings();
     const page = process.env.WALL_SETTINGS;
@@ -660,7 +831,11 @@ app.whenReady().then(() => {
       log('page state', await r.win.webContents.executeJavaScript('JSON.stringify(window.__dbg && window.__dbg())'));
       const img = await r.win.webContents.capturePage();
       fs.writeFileSync(process.env.WALL_CAPTURE, img.toPNG());
+      for (const x of [...wins.values()].slice(1)) fs.writeFileSync(process.env.WALL_CAPTURE.replace(/\.png$/, `-screen-${x.id}.png`), (await x.win.webContents.capturePage()).toPNG());
       if (settingsWin && !settingsWin.isDestroyed()) fs.writeFileSync(process.env.WALL_CAPTURE.replace(/\.png$/, '-settings.png'), (await settingsWin.webContents.capturePage()).toPNG());
+      if (panelWin && !panelWin.isDestroyed()) fs.writeFileSync(process.env.WALL_CAPTURE.replace(/\.png$/, '-panel.png'), (await panelWin.webContents.capturePage()).toPNG());
+      if (peekWin && !peekWin.isDestroyed()) fs.writeFileSync(process.env.WALL_CAPTURE.replace(/\.png$/, '-peek.png'), (await peekWin.webContents.capturePage()).toPNG());
+      for (const k of ['work', 'approve']) fs.writeFileSync(process.env.WALL_CAPTURE.replace(/\.png$/, `-tray-${k}.png`), trayImage(k).toPNG());
       log('captured', process.env.WALL_CAPTURE);
     } catch (e) { log('capture failed', String(e)); }
     if (process.env.WALL_EXIT) quit();
