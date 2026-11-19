@@ -19,6 +19,8 @@ import desk from './platform.mjs'; // Windows or macOS desktop layer
 
 const { Scene, I18N } = globalThis;
 const here = path.dirname(fileURLToPath(import.meta.url));
+// files other programs must open (PowerShell scripts, icons for notifications) are kept outside the packed archive
+const unpacked = (p) => p.replace(`app.asar${path.sep}`, `app.asar.unpacked${path.sep}`);
 const ROOT = process.env.WALL_ROOT || path.join(os.homedir(), '.claude', 'projects');
 const CODEX = process.env.WALL_CODEX || path.join(os.homedir(), '.codex');
 
@@ -194,7 +196,7 @@ function estimateIcons(d) {
 function startHelper() {
   if (!WIN) return; // macOS: Finder's icon positions are not readable without asking for permission; an estimate is used
   try {
-    helper = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', path.join(here, 'icons.ps1')], { windowsHide: true, stdio: ['pipe', 'pipe', 'ignore'] });
+    helper = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', unpacked(path.join(here, 'icons.ps1'))], { windowsHide: true, stdio: ['pipe', 'pipe', 'ignore'] });
     helper.stdout.on('data', (b) => {
       helperBuf += b.toString('utf8');
       let i;
@@ -291,7 +293,7 @@ function codexUsage() { if (!usage) return; usage.codex = codexNow(); const k = 
 // Notifications: a task finished, one waits for your approval, or a quota passed your limit.
 function notify(title, body, onClick) {
   if (!Notification.isSupported()) return;
-  const n = new Notification({ title, body, silent: false, icon: path.join(here, '..', 'assets', 'tray-64.png') });
+  const n = new Notification({ title, body, silent: false, icon: unpacked(path.join(here, '..', 'assets', 'tray-64.png')) });
   if (onClick) n.on('click', onClick);
   n.show();
   log('notify', title, body);

@@ -2,12 +2,28 @@
   "name": "agent-wallpaper",
   "private": true,
   "version": "0.2.0",
-  "description": "A live desktop wallpaper for Windows that shows what Claude Code and Codex are doing, read from their local session logs.",
+  "description": "A live desktop wallpaper for Windows and macOS that shows what Claude Code, Codex and Cursor are doing, read from their local session logs.",
   "license": "MIT",
   "author": "Harry Alexander Xin",
-  "repository": { "type": "git", "url": "https://github.com/HarryXin0919/agent-wallpaper.git" },
-  "keywords": ["claude-code", "codex", "wallpaper", "desktop", "electron", "windows", "ai-agents"],
-  "os": ["win32"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/HarryXin0919/agent-wallpaper.git"
+  },
+  "keywords": [
+    "claude-code",
+    "codex",
+    "cursor",
+    "wallpaper",
+    "desktop",
+    "electron",
+    "windows",
+    "macos",
+    "ai-agents"
+  ],
+  "os": [
+    "win32",
+    "darwin"
+  ],
   "main": "app/main.mjs",
   "type": "module",
   "scripts": {
@@ -16,10 +32,90 @@
     "test:launch": "node test/launch.mjs",
     "startup:add": "powershell -NoProfile -ExecutionPolicy Bypass -File app/startup.ps1",
     "startup:remove": "powershell -NoProfile -ExecutionPolicy Bypass -File app/startup.ps1 -Remove",
-    "screenshot": "node tools/demoframe.mjs docs/screenshot.png"
+    "screenshot": "node tools/demoframe.mjs docs/screenshot.png",
+    "dist:win": "electron-builder --win",
+    "dist:mac": "electron-builder --mac"
   },
   "dependencies": {
     "electron": "45.3.4",
     "koffi": "3.3.8"
+  },
+  "devDependencies": {
+    "electron-builder": "^26.18.0"
+  },
+  "build": {
+    "appId": "dev.agentwallpaper.app",
+    "productName": "Agent Wallpaper",
+    "artifactName": "Agent-Wallpaper-${version}-${os}-${arch}.${ext}",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "app/**",
+      "src/**",
+      "assets/**",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "app/*.ps1",
+      "assets/**",
+      "node_modules/koffi/**",
+      "node_modules/@koromix/**"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "artifactName": "Agent-Wallpaper-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "Agent-Wallpaper-${version}-portable.${ext}"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png",
+      "category": "public.app-category.developer-tools",
+      "identity": null,
+      "extendInfo": {
+        "LSUIElement": true
+      }
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "HarryXin0919",
+      "repo": "agent-wallpaper"
+    }
   }
 }
