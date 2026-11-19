@@ -1,6 +1,6 @@
 # Agent Wallpaper
 
-**A live desktop wallpaper for Windows and macOS that shows what Claude Code, Codex and Cursor are doing.**
+**A live desktop wallpaper for Windows and macOS that shows what Claude Code, Codex, Gemini CLI and Cursor are doing.**
 
 [![CI](https://github.com/HarryXin0919/agent-wallpaper/actions/workflows/ci.yml/badge.svg)](https://github.com/HarryXin0919/agent-wallpaper/actions/workflows/ci.yml) [![Release](https://img.shields.io/github/v/release/HarryXin0919/agent-wallpaper)](https://github.com/HarryXin0919/agent-wallpaper/releases/latest) · [中文说明](README.zh-CN.md)
 
@@ -12,10 +12,10 @@ It reads the session logs these assistants already keep on your computer. It nev
 
 ## Features
 
-- **Claude Code, Codex and Cursor side by side.** Each source has its own color (Claude coral, Codex blue by default). When several tasks run at once, each gets its own lane. Extra log folders (a second account, Claude Code inside WSL) can be added.
+- **Claude Code, Codex, Gemini CLI and Cursor side by side.** Each source has its own color (Claude coral, Codex blue by default). When several tasks run at once, each gets its own lane. Extra log folders (a second account, Claude Code inside WSL) can be added.
 - **Progress you can read at a glance.** The plan the agent keeps (Claude's task list, Codex's plan) becomes a progress bar with the current step and how long it has taken.
 - **Every action as a card.** Reads, searches, edits (+/− lines), commands, subagents, web lookups and thinking time, newest last; the running one glows.
-- **States:** thinking, running a command, waiting for your approval, maybe stuck, done.
+- **States:** thinking, running a command, waiting for your approval, maybe stuck, done. Approval waits can be reported exactly by an optional Claude Code hook (below).
 - **Usage panel:** Claude's 5-hour and weekly quota, Codex's quota, tokens used today and a live tokens-per-minute figure.
 - **Click a card** to open that session in the Claude or Codex desktop app.
 - **Stays out of the way.** Panels go only into the largest empty part of the desktop. It works over Wallpaper Engine and other live wallpapers, and on Windows it pauses when a full-screen window covers the desktop.
@@ -60,10 +60,10 @@ Right-click the tray icon and choose **Settings…** (or press Ctrl + Alt + Shif
 
 | Page | What you can change |
 |---|---|
-| AI sources | Turn Claude Code, Codex and Cursor on or off, pick each one's color, add more log folders |
+| AI sources | Turn Claude Code, Codex, Gemini CLI and Cursor on or off, pick each one's color, add more log folders |
 | Display | Language, position (auto avoids icons, or left / center / right), size, which screens, tasks shown at once, glass depth, animation |
 | Usage | Show or hide the usage panel and each quota |
-| Behavior & alerts | Appear with the Claude app and go away when it quits, how long finished tasks stay, notifications and the quota alert level |
+| Behavior & alerts | Appear with the Claude app and go away when it quits, exact approval waits, how long finished tasks stay, notifications and the quota alert level |
 | Privacy | Privacy mode |
 | Shortcuts | Every shortcut, recorded by pressing the new keys |
 
@@ -93,6 +93,7 @@ If the panels do not appear on Windows, the tray menu has **Can't see it? Try an
 |---|---|
 | Claude tasks | `~/.claude/projects/**/*.jsonl` |
 | Codex tasks and Codex quota | `~/.codex/sessions/**/rollout-*.jsonl` (Codex records its quota with every reply) |
+| Gemini CLI tasks | `~/.gemini/tmp/*/chats/session-*.jsonl` (Gemini CLI marks a step that waits for approval, so that one is exact) |
 | Cursor tasks (experimental) | Cursor's `User/globalStorage/state.vscdb`, opened read-only. Cursor stores no reliable per-action times, so actions are timed by when the wallpaper first sees them |
 | Claude quota | A local usage service if one is running (below); otherwise the Claude desktop app's own record, `plan-usage-history.json` in its app-data folder |
 | Tokens per task, live rate | Counted from the logs |
@@ -106,7 +107,7 @@ If the panels do not appear on Windows, the tray menu has **Can't see it? Try an
 - **Windows placement.** The window is a layered child of the desktop's `Progman` window, placed below the icon view (`SHELLDLL_DefView`), so icons stay on top and clickable. Two fallback placements cover other Windows builds. `app/icons.ps1` reads icon positions through the shell's `IFolderView` (read-only), and `Glass.freeRect` finds the largest rectangle no icon touches.
 - **macOS placement.** The window is a desktop-level window (above the wallpaper, below Finder's icons) on every Space. Finder's icon positions cannot be read without asking for permission, so they are estimated (Finder fills columns from the right); the Position setting can move the panels.
 - **Clicks.** The wallpaper cannot receive clicks. The program polls the mouse button and cursor, and only counts a click when it lands on a card while the desktop is in front (on macOS: while Finder is the frontmost app). It opens `claude://`, `codex://` or the Cursor app.
-- **Approval waits** are inferred: logs do not record permission prompts, so a normally instant step pending for over 8 s, or a short command pending for over 40 s, counts as waiting for you.
+- **Approval waits.** Claude Code's logs do not record permission prompts, so by default a normally instant step pending for over 8 s, or a short command pending for over 40 s, counts as waiting for you. Turn on **Exact "waiting for your approval"** to have them reported instead: this adds one Notification hook to `~/.claude/settings.json` that appends each permission prompt to `~/.claude/agent-wallpaper/events.jsonl` (a copy of the settings file is kept first, and turning the switch off removes the hook).
 - **Light on resources.** Every animation runs off one 15 fps clock that sets CSS variables, instead of CSS animations at the screen's refresh rate.
 
 ## Project layout
@@ -115,7 +116,9 @@ If the panels do not appear on Windows, the tray menu has **Can't see it? Try an
 |---|---|
 | `src/parse.mjs`, `src/live.mjs` | Read Claude Code logs as they grow |
 | `src/codex.mjs` | Read Codex logs into the same timeline |
+| `src/gemini.mjs` | Read Gemini CLI sessions |
 | `src/cursor.mjs` | Read Cursor's agent conversations (read-only SQLite) |
+| `src/hooks.mjs` | The optional approval hook |
 | `src/estimate.mjs` | Claude quota estimate between readings |
 | `src/settings.mjs`, `src/i18n.js` | Settings with defaults; Chinese and English text |
 | `src/flow.js`, `src/scene.js` | Group actions by plan step; infer each task's state |
@@ -131,7 +134,7 @@ If the panels do not appear on Windows, the tray menu has **Can't see it? Try an
 
 ## Not affiliated
 
-Agent Wallpaper is an independent project. It is not made by or affiliated with Anthropic, OpenAI or Anysphere. Claude, Claude Code, Codex and Cursor are trademarks of their owners.
+Agent Wallpaper is an independent project. It is not made by or affiliated with Anthropic, OpenAI, Google or Anysphere. Claude, Claude Code, Codex, Gemini and Cursor are trademarks of their owners.
 
 ## License
 

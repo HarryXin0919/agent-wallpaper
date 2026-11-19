@@ -83,6 +83,19 @@ export function cursorDb(file, now) {
   return cid;
 }
 
+export function geminiLog(now) {
+  const t = (s) => iso(now - s * 1000);
+  return [
+    { sessionId: 'g-0001', projectHash: 'abc', startTime: t(700), lastUpdated: t(10), kind: 'main' },
+    { id: 'u1', timestamp: t(700), type: 'user', content: [{ text: 'Add a dark theme to the docs site' }] },
+    { id: 'g1', timestamp: t(690), type: 'gemini', content: '', thoughts: [{ subject: 'Plan', description: '', timestamp: t(685) }],
+      toolCalls: [{ id: 'tc1', name: 'read_file', args: { absolute_path: '/site/theme.css' }, status: 'success', timestamp: t(684) }], tokens: { input: 9000, output: 300, cached: 6000, thoughts: 120, total: 9420 } },
+    { id: 'g2', timestamp: t(400), type: 'gemini', content: '', toolCalls: [{ id: 'tc2', name: 'replace', args: { file_path: '/site/theme.css', old_string: 'a', new_string: 'a\nb' }, status: 'scheduled', timestamp: t(400) }] },
+    { $patch: { id: 'g2', toolCalls: [{ id: 'tc2', status: 'success', result: [] }] } },
+    { id: 'g3', timestamp: t(15), type: 'gemini', content: '', toolCalls: [{ id: 'tc3', name: 'run_shell_command', args: { command: 'npm run build', description: 'Build the site' }, status: 'awaiting_approval', timestamp: t(15) }] },
+  ];
+}
+
 export function writeAll(dir, now = Date.now()) {
   const cp = path.join(dir, 'claude', 'projects', 'demo-project');
   fs.mkdirSync(cp, { recursive: true });
@@ -92,9 +105,12 @@ export function writeAll(dir, now = Date.now()) {
   fs.mkdirSync(xp, { recursive: true });
   fs.writeFileSync(path.join(xp, 'rollout-2026-11-18T10-00-00-01a1ffff-0000-7000-8000-000000000001.jsonl'), jl(codexLog(now)));
   fs.writeFileSync(path.join(dir, 'codex', 'session_index.jsonl'), JSON.stringify({ id: '01a1ffff-0000-7000-8000-000000000001', thread_name: 'Flaky upload test' }) + '\n');
+  const gp = path.join(dir, 'gemini', 'tmp', 'abc', 'chats');
+  fs.mkdirSync(gp, { recursive: true });
+  fs.writeFileSync(path.join(gp, 'session-2026-11-19T10-00-g0001.jsonl'), jl(geminiLog(now)));
   fs.mkdirSync(path.join(dir, 'cursor'), { recursive: true });
   cursorDb(path.join(dir, 'cursor', 'state.vscdb'), now);
-  return { claude: path.join(dir, 'claude', 'projects'), codex: path.join(dir, 'codex'), cursor: path.join(dir, 'cursor', 'state.vscdb') };
+  return { claude: path.join(dir, 'claude', 'projects'), codex: path.join(dir, 'codex'), cursor: path.join(dir, 'cursor', 'state.vscdb'), gemini: path.join(dir, 'gemini') };
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1'))) {

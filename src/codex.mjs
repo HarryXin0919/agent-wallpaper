@@ -236,10 +236,13 @@ export class CodexLive {
         if (!/^rollout-.*\.jsonl$/.test(e.name) || this.threads.has(f)) continue;
         let st; try { st = fs.statSync(f); } catch { continue; }
         if (st.mtimeMs < cutoff) continue;
-        const stream = new CodexStream();
         // the first record says what kind of thread this is; read it even when only the tail is followed
-        try { const fd = fs.openSync(f, 'r'); const b = Buffer.alloc(Math.min(st.size, 256 * 1024)); fs.readSync(fd, b, 0, b.length, 0); fs.closeSync(fd); stream.line(b.toString('utf8').split('\n')[0]); } catch {}
-        this.threads.set(f, { file: f, stream, tail: new Tail(f, stream) });
+        let first = '';
+        try { const fd = fs.openSync(f, 'r'); const b = Buffer.alloc(Math.min(st.size, 256 * 1024)); fs.readSync(fd, b, 0, b.length, 0); fs.closeSync(fd); first = b.toString('utf8').split('\n')[0]; } catch {}
+        const make = () => { const s = new CodexStream(); s.line(first); return s; };
+        const t = { file: f, stream: make() };
+        t.tail = new Tail(f, t.stream, make, (s) => { t.stream = s; });
+        this.threads.set(f, t);
       }
     };
     walk(this.root, 0);

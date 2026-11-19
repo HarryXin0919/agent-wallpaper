@@ -11,8 +11,10 @@ import http from 'node:http';
 import { Live } from '../src/live.mjs';
 import { CodexLive } from '../src/codex.mjs';
 import { CursorLive } from '../src/cursor.mjs';
+import { GeminiLive } from '../src/gemini.mjs';
 import { Ledger, estimate } from '../src/estimate.mjs';
 import * as S from '../src/settings.mjs';
+import * as hooks from '../src/hooks.mjs';
 import '../src/scene.js';  // Scene.stateOf, for notifications
 import '../src/i18n.js';   // I18N
 import desk from './platform.mjs'; // Windows or macOS desktop layer
@@ -23,6 +25,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const unpacked = (p) => p.replace(`app.asar${path.sep}`, `app.asar.unpacked${path.sep}`);
 const ROOT = process.env.WALL_ROOT || path.join(os.homedir(), '.claude', 'projects');
 const CODEX = process.env.WALL_CODEX || path.join(os.homedir(), '.codex');
+const GEMINI = process.env.WALL_GEMINI || path.join(os.homedir(), '.gemini');
 
 // keep Electron's own working files inside this folder, and keep it quiet
 app.setName('Agent Wallpaper');
@@ -64,22 +67,26 @@ function buildSources() {
   if (s.codex.on) list.push({ id: 'codex', name: 'Codex', color: s.codex.color, kind: 'codex', r: reuse('codex', () => new CodexLive(CODEX, { hours: 12 })) });
   const cdb = process.env.WALL_CURSOR || CursorLive.find();
   if ((s.cursor.on || process.env.WALL_CURSOR) && cdb) list.push({ id: 'cursor', name: 'Cursor', color: s.cursor.color, kind: 'cursor', r: reuse('cursor', () => new CursorLive(cdb, { hours: 12 })) });
+  if (s.gemini.on && fs.existsSync(path.join(GEMINI, 'tmp'))) list.push({ id: 'gemini', name: 'Gemini', color: s.gemini.color, kind: 'gemini', r: reuse('gemini', () => new GeminiLive(GEMINI, { hours: 12 })) });
   for (const c of cfg.custom) if (c.on) list.push({ id: 'x' + c.id, name: c.name, color: c.color, kind: c.kind, r: reuse(`x:${c.kind}:${c.path}`, () => (c.kind === 'claude' ? new Live(claudeRoot(c.path), { hours: 12 }) : new CodexLive(codexHome(c.path), { hours: 12 }))) });
   sources = list;
 }
 const codexReader = () => (sources.find((x) => x.id === 'codex') || {}).r;
+const asks = new hooks.Asks(); // permission prompts reported by the optional Claude Code hook
 function snapAll() {
   const out = [];
   for (const s of sources) {
     for (const it of s.r.snapshot()) {
       const id = s.id.startsWith('x') && s.kind === 'claude' ? `${s.id}:${it.id}` : it.id; // custom Claude folders get their own prefix
-      out.push({ ...it, id, src: s.id, task: { ...it.task, src: s.kind, brand: { name: s.name, color: s.color } } });
+      const task = { ...it.task, src: s.kind, brand: { name: s.name, color: s.color } };
+      if (s.id === 'claude' && cfg.exactApproval) { task.exact = true; task.asks = asks.for(it.id).filter((t) => t >= task.t0); }
+      out.push({ ...it, id, src: s.id, task });
     }
   }
   return out.sort((a, b) => b.last - a.last);
 }
 function pollAll() {
-  let changed = false;
+  let changed = cfg.exactApproval ? asks.poll() : false;
   for (const s of sources) { try { if (s.r.poll()) { changed = true; if (s.id === 'codex') codexUsage(); } } catch (e) { log('poll failed', s.id, String(e)); } }
   return changed;
 }
@@ -256,14 +263,7 @@ function getLocal(port, pathname, ms) {
 async function refreshUsage() {
   if (usageBusy) return; usageBusy = true;
   const u = { at: Date.now() };
-  try {
-    const d = JSON.parse(fs.readFileSync(PLAN_FILE, 'utf8'));
-    const s = (d.samples || []).filter((x) => x.u && x.u.fh != null).pop();
-    if (s) u.plan = { fh: Date.now() - s.t > 5 * 3600e3 ? 0 : s.u.fh, sd: s.u.sd, t: s.t, src: 'app' };
-    await ledger.refresh();
-    const e = estimate(d.samples || [], ledger, Date.now());
-    if (e) u.plan = { fh: e.fh, sd: e.sd, fhReset: e.fhReset, sdReset: e.sdReset, t: e.t, src: 'est' };
-  } catch (err) { log('estimate failed', String(err)); }
+  // the usage service first: while it has live figures, the slower estimate is not needed
   const p = await getLocal(8787, '/usage', 25000);
   if (p) {
     if (p.tok_today != null) u.today = { tok: p.tok_today, out: p.tok_today_out, cost: p.cost_today_usd };
@@ -271,6 +271,17 @@ async function refreshUsage() {
     if (p.ok && p.session_pct != null && p.limits_source !== 'app') u.plan = { fh: p.session_pct, sd: p.week_pct, fhReset: p.session_reset_s, sdReset: p.week_reset_s, t: (p.ts || Date.now() / 1000) * 1000, src: 'live' };
     else if (!p.ok && p.err) u.serviceErr = 'error';
   } else u.serviceErr = 'down';
+  if (!u.plan) {
+    try {
+      const d = JSON.parse(fs.readFileSync(PLAN_FILE, 'utf8'));
+      const s = (d.samples || []).filter((x) => x.u && x.u.fh != null).pop();
+      if (s) u.plan = { fh: Date.now() - s.t > 5 * 3600e3 ? 0 : s.u.fh, sd: s.u.sd, t: s.t, src: 'app' };
+      // between the app's readings: the last reading plus the tokens used since
+      await ledger.refresh();
+      const e = estimate(d.samples || [], ledger, Date.now());
+      if (e) u.plan = { fh: e.fh, sd: e.sd, fhReset: e.fhReset, sdReset: e.sdReset, t: e.t, src: 'est' };
+    } catch (err) { log('estimate failed', String(err)); }
+  }
   u.codex = codexNow();
   usage = u; usageBusy = false; send('usage', usage); quotaAlerts();
   log('usage', { plan: u.plan && u.plan.src, today: !!u.today, err: u.serviceErr });
@@ -352,10 +363,12 @@ function loadSessions() {
 function openUrl(url) { log('open', url); shell.openExternal(url).catch((e) => log('open failed', String(e))); }
 function openSession(id) {
   if (id.startsWith('cx:')) return openUrl(`codex://threads/${encodeURIComponent(id.slice(3))}`);
+  if (id.startsWith('gm:')) return log('open: Gemini CLI runs in a terminal, nothing to open'); // no app to jump to
   if (id.startsWith('cu:')) {
     if (MAC) { spawn('/usr/bin/open', ['-a', 'Cursor'], { detached: true, stdio: 'ignore' }).unref(); return; }
-    const exe = path.join(process.env.LOCALAPPDATA || '', 'Programs', 'cursor', 'Cursor.exe');
-    if (fs.existsSync(exe)) { spawn(exe, [], { detached: true, stdio: 'ignore' }).unref(); return; }
+    // Cursor's links cannot open one particular conversation, so the app itself is brought up
+    const exe = [path.join(process.env.LOCALAPPDATA || '', 'Programs', 'cursor', 'Cursor.exe'), path.join(process.env.ProgramFiles || 'C:\\Program Files', 'cursor', 'Cursor.exe')].find((p) => fs.existsSync(p));
+    if (exe) { spawn(exe, [], { detached: true, stdio: 'ignore' }).unref(); return; }
     return openUrl('cursor://');
   }
   const cliId = id.replace(/^x[\w-]+:/, '');
@@ -405,6 +418,7 @@ function sourceInfo() {
   return {
     claude: { found: fs.existsSync(ROOT), path: short(path.dirname(ROOT)), today: count(get('claude')) },
     codex: { found: fs.existsSync(path.join(CODEX, 'sessions')), path: short(CODEX), today: count(get('codex')) },
+    gemini: { found: fs.existsSync(path.join(GEMINI, 'tmp')), path: short(GEMINI), today: count(get('gemini')) },
     cursor: { found: !!cdb, path: cdb ? short(path.dirname(path.dirname(path.dirname(cdb)))) : '', today: count(get('cursor')) },
     custom: Object.fromEntries(cfg.custom.map((c) => [c.id, { found: fs.existsSync(c.path), today: count(readers.get(`x:${c.kind}:${c.path}`)) }])),
   };
@@ -424,9 +438,11 @@ function openSettings() {
 }
 // the switch shows what is really set up (a login item or a Startup shortcut), not only what was last chosen
 const followOpenNow = () => { try { return FOLLOW_IN_APP ? app.getLoginItemSettings().openAtLogin : LINKS.some((n) => fs.existsSync(path.join(STARTUP, n))); } catch { return cfg.follow.open; } };
-const cfgView = () => ({ ...cfg, follow: { ...cfg.follow, open: followOpenNow() } });
+const cfgView = () => ({ ...cfg, follow: { ...cfg.follow, open: followOpenNow() }, exactApproval: hooks.installed() });
 ipcMain.handle('cfg:get', () => ({ cfg: cfgView(), lang: I18N.lang, info: sourceInfo(), displays: displayInfo(), keysOk, version: app.getVersion() }));
-ipcMain.handle('cfg:set', (_e, patch) => { const prev = cfg; cfg = S.apply(cfg, patch); if (patch && patch.follow && typeof patch.follow.open === 'boolean') startupShortcut(patch.follow.open); S.save(SETTINGS, cfg); applyCfg(prev); return { cfg: cfgView(), lang: I18N.lang, info: sourceInfo(), displays: displayInfo(), keysOk }; });
+ipcMain.handle('cfg:set', (_e, patch) => { const prev = cfg; cfg = S.apply(cfg, patch); if (patch && patch.follow && typeof patch.follow.open === 'boolean') startupShortcut(patch.follow.open);
+  // the approval hook: added to or removed from Claude Code's settings only when this switch is changed
+  if (patch && typeof patch.exactApproval === 'boolean') { try { patch.exactApproval ? hooks.install() : hooks.uninstall(); } catch (e) { log('hook change failed', String(e)); } cfg = S.apply(cfg, { exactApproval: hooks.installed() }); } S.save(SETTINGS, cfg); applyCfg(prev); return { cfg: cfgView(), lang: I18N.lang, info: sourceInfo(), displays: displayInfo(), keysOk }; });
 ipcMain.handle('cfg:pickFolder', async () => {
   const r = await dialog.showOpenDialog(settingsWin, { properties: ['openDirectory', 'showHiddenFiles'] });
   if (r.canceled || !r.filePaths[0]) return null;
@@ -532,7 +548,8 @@ app.whenReady().then(() => {
 
   // follow the logs: react as soon as a log file changes (a slower poll stays as a safety net)
   let soon = null;
-  for (const dir of [ROOT, path.join(CODEX, 'sessions')]) {
+  for (const dir of [ROOT, path.join(CODEX, 'sessions'), path.join(GEMINI, 'tmp'), hooks.DIR]) {
+    if (!fs.existsSync(dir)) continue;
     try { fs.watch(dir, { recursive: true }, (_ev, f) => { if (!f || !/\.jsonl$/.test(f) || paused || soon) return; soon = setTimeout(() => { soon = null; if (pollAll()) pushData(); }, 120); }); } catch (e) { log('watch failed', dir, String(e)); }
   }
   setInterval(() => { if (!paused && pollAll()) pushData(); }, 2000);

@@ -1,6 +1,6 @@
 # Agent Wallpaper
 
-**Windows 和 macOS 动态桌面壁纸：实时显示 Claude Code、Codex 和 Cursor 正在做的事。**
+**Windows 和 macOS 动态桌面壁纸：实时显示 Claude Code、Codex、Gemini CLI 和 Cursor 正在做的事。**
 
 [![CI](https://github.com/HarryXin0919/agent-wallpaper/actions/workflows/ci.yml/badge.svg)](https://github.com/HarryXin0919/agent-wallpaper/actions/workflows/ci.yml) [![Release](https://img.shields.io/github/v/release/HarryXin0919/agent-wallpaper)](https://github.com/HarryXin0919/agent-wallpaper/releases/latest) · [English](README.md)
 
@@ -12,10 +12,10 @@
 
 ## 功能
 
-- **Claude Code、Codex 和 Cursor 一起显示：** 每个来源有自己的颜色（默认 Claude 珊瑚色、Codex 浅蓝色）。同时有几个任务在做时，每个任务各占一栏。还可以添加其他记录文件夹，比如第二个账号的，或 WSL 里的 Claude Code。
+- **Claude Code、Codex、Gemini CLI 和 Cursor 一起显示：** 每个来源有自己的颜色（默认 Claude 珊瑚色、Codex 浅蓝色）。同时有几个任务在做时，每个任务各占一栏。还可以添加其他记录文件夹，比如第二个账号的，或 WSL 里的 Claude Code。
 - **进度一目了然：** 助手自己列的任务清单（Claude 的任务清单、Codex 的计划）显示成进度条，标出当前第几步、这一步做了多久。
 - **每个操作一张卡片：** 读文件、搜索、修改（加了几行、删了几行）、运行命令、子代理、上网、思考时长，最新的在最后，正在进行的那张会发光。
-- **状态：** 正在思考、正在运行命令、等你批准、可能卡住了、已完成。
+- **状态：** 正在思考、正在运行命令、等你批准、可能卡住了、已完成。“等你批准”可以由一个可选的 Claude Code 钩子准确上报（见下文）。
 - **用量面板：** Claude 的 5 小时额度和每周额度、Codex 额度、今日 tokens、每分钟实时用量。
 - **点卡片跳转：** 在 Claude 或 Codex 桌面端打开对应的会话。
 - **不挡图标：** 面板只放在桌面最大的空白区域。支持 Wallpaper Engine 等动态壁纸；在 Windows 上，桌面被全屏窗口挡住时自动暂停。
@@ -60,10 +60,10 @@ npm start
 
 | 页面 | 可以改什么 |
 |---|---|
-| AI 来源 | 开关 Claude Code、Codex 和 Cursor，选每个来源的颜色，添加其他记录文件夹 |
+| AI 来源 | 开关 Claude Code、Codex、Gemini CLI 和 Cursor，选每个来源的颜色，添加其他记录文件夹 |
 | 显示 | 语言、位置（自动避开图标，或固定在左 / 中 / 右）、大小、显示在哪块屏幕、同时显示几个任务、玻璃深浅、动画 |
 | 用量 | 显示或隐藏用量面板，以及其中每一项额度 |
-| 行为与提醒 | 跟随 Claude 出现和隐藏、完成的任务保留多久、各类通知和额度提醒线 |
+| 行为与提醒 | 跟随 Claude 出现和隐藏、准确识别“等你批准”、完成的任务保留多久、各类通知和额度提醒线 |
 | 隐私 | 隐私模式 |
 | 快捷键 | 每个快捷键都可以改：点一下，再按下新的组合键 |
 
@@ -93,6 +93,7 @@ npm start
 |---|---|
 | Claude 任务 | `~/.claude/projects/**/*.jsonl` |
 | Codex 任务和 Codex 额度 | `~/.codex/sessions/**/rollout-*.jsonl`（Codex 每次回复都会记下当前额度） |
+| Gemini CLI 任务 | `~/.gemini/tmp/*/chats/session-*.jsonl`（Gemini CLI 会标出等待批准的步骤，所以这一项是准确的） |
 | Cursor 任务（实验） | Cursor 的 `User/globalStorage/state.vscdb`，只读打开。Cursor 的记录里没有可靠的操作时间，所以按壁纸第一次看到的时间排列 |
 | Claude 额度 | 本机的用量服务（见下文）；没有时用 Claude 桌面端自己的记录（应用数据文件夹里的 `plan-usage-history.json`） |
 | 每个任务的 tokens、实时用量 | 从会话记录里计算 |
@@ -106,7 +107,7 @@ npm start
 - **Windows 上的位置：** 窗口作为桌面 `Progman` 窗口的分层子窗口，插在图标层（`SHELLDLL_DefView`）下面，所以图标始终在上面、照常可点。另有两种备用方式，适配其他版本的 Windows。`app/icons.ps1` 通过资源管理器的 `IFolderView` 只读地获取图标位置，`Glass.freeRect` 再找出不碰任何图标的最大矩形。
 - **macOS 上的位置：** 窗口是桌面层级的窗口（在壁纸之上、访达图标之下），在每个桌面空间都显示。访达图标的位置不申请权限就读不到，所以按访达从右往左排列的方式估算；也可以在设置里调整面板位置。
 - **点击：** 壁纸本身收不到点击。程序轮询鼠标左键和光标位置，只有点在卡片上、并且当时桌面在最前面（macOS 上是访达为当前应用）时才算点击，然后打开 `claude://`、`codex://` 链接或 Cursor。
-- **“等你批准”是推断的：** 记录里没有权限提示。通常立刻完成的步骤超过 8 秒没有结果，或普通命令超过 40 秒没有结果，就视为在等你批准。
+- **“等你批准”：** Claude Code 的记录里没有权限提示，所以默认按推断：通常立刻完成的步骤超过 8 秒没有结果，或普通命令超过 40 秒没有结果，就视为在等你批准。打开“准确识别‘等你批准’”后改为由 Claude Code 上报：在 `~/.claude/settings.json` 里加一个通知钩子，把每次权限提示追加到 `~/.claude/agent-wallpaper/events.jsonl`（修改前先备份设置文件；关掉开关会删掉这个钩子）。
 - **省资源：** 所有动画由同一个每秒 15 帧的时钟驱动，不使用按屏幕刷新率运行的 CSS 动画。
 
 ## 文件
@@ -115,7 +116,9 @@ npm start
 |---|---|
 | `src/parse.mjs`、`src/live.mjs` | 跟着 Claude Code 记录的增长实时读取 |
 | `src/codex.mjs` | 把 Codex 记录整理成同样的时间线 |
+| `src/gemini.mjs` | 读取 Gemini CLI 的会话 |
 | `src/cursor.mjs` | 读取 Cursor 的对话（只读 SQLite） |
+| `src/hooks.mjs` | 可选的“等你批准”钩子 |
 | `src/estimate.mjs` | 两次实测之间估算 Claude 额度 |
 | `src/settings.mjs`、`src/i18n.js` | 设置及默认值；中英文文字 |
 | `src/flow.js`、`src/scene.js` | 按任务清单的步骤分组；判断任务状态 |
@@ -131,7 +134,7 @@ npm start
 
 ## 声明
 
-Agent Wallpaper 是独立项目，与 Anthropic、OpenAI、Anysphere 没有关联。Claude、Claude Code、Codex 和 Cursor 是其各自所有者的商标。
+Agent Wallpaper 是独立项目，与 Anthropic、OpenAI、Google、Anysphere 没有关联。Claude、Claude Code、Codex、Gemini 和 Cursor 是其各自所有者的商标。
 
 ## 许可证
 

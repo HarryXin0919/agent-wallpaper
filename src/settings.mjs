@@ -9,6 +9,7 @@ export const DEFAULTS = {
     claude: { on: true, color: '#f4a98c' },
     codex: { on: true, color: '#8fc1ff' },
     cursor: { on: false, color: '#b9a2ff' },
+    gemini: { on: true, color: '#9fe6d2' },
   },
   custom: [], // extra log folders: [{ id, name, kind: 'claude' | 'codex', path, color, on }]
   lang: 'auto',        // auto | zh | en
@@ -19,6 +20,7 @@ export const DEFAULTS = {
   glass: 'auto',       // auto | dark | light
   motion: 'full',      // full | reduced | off
   privacy: false,      // only titles and kinds of action: no request text, file names or commands
+  exactApproval: false, // a Claude Code hook reports permission prompts (adds one hook to ~/.claude/settings.json)
   usage: { show: true, h5: true, week: true, codex: true, warm: 80, hot: 95 },
   notify: { done: true, approval: true, quota: true, quotaAt: 80 },
   follow: { open: true, close: true }, // open with the Claude desktop app (Startup shortcut) / close with it

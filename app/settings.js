@@ -23,6 +23,7 @@
     followClose: '退出 Claude 时一起关闭',
     keep: '完成后保持清晰', keepS: '之后慢慢变淡，12 小时后消失', keepO: { 15: '15 分钟', 60: '1 小时', 180: '3 小时' },
     waitDone: '等你回复多久算完成', waitDoneS: '做完一轮、在等你回复的任务，超过这个时间就当作已完成', waitO: { 1: '1 小时', 2: '2 小时', 6: '6 小时' },
+    exact: '准确识别“等你批准”', exactS: '在 Claude Code 的设置（~/.claude/settings.json）里加一个通知钩子：Claude 弹出权限提示时，记一行到 ~/.claude/agent-wallpaper/events.jsonl。不打开时，按“步骤超过 8 秒、命令超过 40 秒没结果”推断。关掉时会删掉这个钩子。',
     nDone: '任务完成时通知', nApprove: '等你批准时通知', nQuota: '额度快用完时通知', nQuotaS: '每个额度周期只提醒一次',
     nAt: '提醒线', test: '发送测试通知',
     privacy: '隐私', privacyLead: '投屏、录屏或别人能看到你的屏幕时使用。',
@@ -55,6 +56,7 @@
     followClose: 'Close when Claude quits',
     keep: 'Finished tasks stay clear for', keepS: 'Then they fade, and disappear after 12 hours', keepO: { 15: '15 min', 60: '1 hour', 180: '3 hours' },
     waitDone: 'A waiting turn counts as done after', waitDoneS: 'A task that finished a turn and waits for your reply', waitO: { 1: '1 hour', 2: '2 hours', 6: '6 hours' },
+    exact: 'Exact "waiting for your approval"', exactS: 'Adds a notification hook to Claude Code\'s settings (~/.claude/settings.json): when Claude shows a permission prompt, one line goes to ~/.claude/agent-wallpaper/events.jsonl. Without it, approval waits are inferred (a step pending over 8 s, a command over 40 s). Turning it off removes the hook.',
     nDone: 'Notify when a task finishes', nApprove: 'Notify when approval is needed', nQuota: 'Notify when a quota runs low', nQuotaS: 'Once per quota period',
     nAt: 'Alert at', test: 'Send a test notification',
     privacy: 'Privacy', privacyLead: 'For screen sharing, recording, or when others can see your screen.',
@@ -87,7 +89,7 @@
       return `<div class="src${x.on ? '' : ' off'}"><span class="dot" style="background:${x.color}"></span><div class="grow"><div class="n"><input class="name" data-name="${k}" value="${esc(x.name)}"><span class="chip">${esc(T.custom)} · ${x.kind === 'claude' ? 'Claude Code' : 'Codex'}</span></div><div class="s">${i.found ? `<em>${esc(T.found)}</em>${i.today != null ? ` · ${esc(T.today(i.today))}` : ''}` : `<em class="no">${esc(T.notFound)}</em>`} · ${esc(x.path)}</div></div>${colors(`custom.${k}.color`, x.color)}${sw(`custom.${k}.on`, x.on)}<button class="del" data-del="${k}" title="×">×</button></div>`;
     }).join('');
     return `<section><h1>${esc(T.ai)}</h1><div class="lead">${esc(T.aiLead)}</div>
-      ${one('claude', 'Claude Code')}${one('codex', 'Codex')}${one('cursor', 'Cursor', `<span class="chip">${esc(T.exp)}</span>`)}${customs}
+      ${one('claude', 'Claude Code')}${one('codex', 'Codex')}${one('gemini', 'Gemini CLI')}${one('cursor', 'Cursor', `<span class="chip">${esc(T.exp)}</span>`)}${customs}
       <button class="add" id="add"><b>＋</b><span>${esc(T.addFolder)} — ${esc(T.addHint)}</span></button>
       <div class="msg">${esc(msg)}</div><div class="note">${esc(T.cursorNote)}</div></section>`;
   }
@@ -118,6 +120,7 @@
     return `<section><h1>${esc(T.behave)}</h1><div class="lead">${esc(T.behaveLead)}</div>
       <div class="box">${row(T.followOpen, T.followOpenS, sw('follow.open', c.follow.open))}${row(T.followClose, '', sw('follow.close', c.follow.close))}</div>
       <div class="box">${row(T.keep, T.keepS, seg('keepDone', T.keepO, c.keepDone))}${row(T.waitDone, T.waitDoneS, seg('waitDone', T.waitO, c.waitDone))}</div>
+      <div class="box">${row(T.exact, T.exactS, sw('exactApproval', c.exactApproval))}</div>
       <div class="box">${row(T.nDone, '', sw('notify.done', n.done))}${row(T.nApprove, '', sw('notify.approval', n.approval))}${row(T.nQuota, T.nQuotaS, sw('notify.quota', n.quota))}
         ${row(T.nAt, '', seg('notify.quotaAt', { 70: '70%', 80: '80%', 90: '90%' }, n.quotaAt))}
         <div class="row"><div class="l"></div><button class="btn" id="test">${esc(T.test)}</button></div></div></section>`;
@@ -165,7 +168,7 @@
       const r = await window.cfg.pickFolder(); if (!r) return;
       if (!r.kind) { msg = T.notLogs; draw(); return; }
       msg = '';
-      const n = S.cfg.custom.length + 1, used = new Set([S.cfg.sources.claude.color, S.cfg.sources.codex.color, S.cfg.sources.cursor.color, ...S.cfg.custom.map((x) => x.color)]);
+      const n = S.cfg.custom.length + 1, used = new Set([S.cfg.sources.claude.color, S.cfg.sources.codex.color, S.cfg.sources.cursor.color, S.cfg.sources.gemini.color, ...S.cfg.custom.map((x) => x.color)]);
       const color = COLORS.find((c) => !used.has(c)) || COLORS[n % COLORS.length];
       const name = (r.kind === 'claude' ? 'Claude Code' : 'Codex') + (/wsl/i.test(r.path) ? ' (WSL)' : ` ${n + 1}`);
       return set({ custom: [...S.cfg.custom, { id: 'c' + Date.now().toString(36).slice(-5), name, kind: r.kind, path: r.path, color, on: true }] });

@@ -3,18 +3,32 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { Stream } from './parse.mjs';
 
-const TAIL = 24 * 1024 * 1024;   // on start, read at most the last 24 MB of a file
-const CHUNK = 4 * 1024 * 1024;
+// On start only the end of a file is read: 2 MB, and further back (8, then 32 MB) only while the latest request is
+// not in what was read. Reading in small pieces keeps the memory the program holds on to small.
+const FIRST = 2 * 1024 * 1024, MAX = 32 * 1024 * 1024;
+const CHUNK = 1024 * 1024;
+const hasPrompt = (st) => st.ev.some((e) => e.k === 'prompt');
 
 export class Tail {
-  constructor(file, stream) { this.file = file; this.stream = stream; this.pos = -1; this.rest = ''; this.mtime = 0; }
-  // read whatever was appended since last time; returns true if anything new arrived
+  // make: builds a fresh stream, for reading further back; onStream: told about that new stream
+  constructor(file, stream, make, onStream) { this.file = file; this.stream = stream; this.make = make; this.onStream = onStream; this.pos = -1; this.rest = ''; this.mtime = 0; this.window = FIRST; }
   read() {
+    const got = this.readOnce();
+    // the first read found no request: start again from further back
+    while (this.make && this.firstFrom > 0 && !hasPrompt(this.stream) && this.window < MAX) {
+      this.window *= 4; this.stream = this.make(); if (this.onStream) this.onStream(this.stream);
+      this.pos = -1; this.mtime = 0; this.readOnce();
+    }
+    this.firstFrom = 0;
+    return got;
+  }
+  // read whatever was appended since last time; returns true if anything new arrived
+  readOnce() {
     let st; try { st = fs.statSync(this.file); } catch { return false; }
     if (st.mtimeMs === this.mtime && st.size === this.pos) return false;
     this.mtime = st.mtimeMs;
     let skipFirst = false;
-    if (this.pos < 0 || st.size < this.pos) { this.pos = Math.max(0, st.size - TAIL); skipFirst = this.pos > 0; this.rest = ''; }
+    if (this.pos < 0 || st.size < this.pos) { this.pos = Math.max(0, st.size - this.window); this.firstFrom = this.pos; skipFirst = this.pos > 0; this.rest = ''; }
     if (st.size === this.pos) return false;
     let fd; try { fd = fs.openSync(this.file, 'r'); } catch { return false; }
     try {
@@ -57,7 +71,9 @@ export class Live {
         let st; try { st = fs.statSync(file); } catch { continue; }
         if (st.mtimeMs < cutoff) continue;
         const stream = new Stream();
-        this.sessions.set(id, { id, file, dir: file.slice(0, -6), stream, tail: new Tail(file, stream), subs: new Map() });
+        const s = { id, file, dir: file.slice(0, -6), stream, subs: new Map() };
+        s.tail = new Tail(file, stream, () => new Stream(), (st) => { s.stream = st; });
+        this.sessions.set(id, s);
       }
     }
     // forget sessions that went quiet long ago

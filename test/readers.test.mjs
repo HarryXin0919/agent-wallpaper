@@ -8,6 +8,7 @@ import { writeAll } from './fixtures.mjs';
 import { Live } from '../src/live.mjs';
 import { CodexLive, cmdLabel } from '../src/codex.mjs';
 import { CursorLive } from '../src/cursor.mjs';
+import { GeminiLive } from '../src/gemini.mjs';
 import { Ledger, estimate, calibrate } from '../src/estimate.mjs';
 import * as S from '../src/settings.mjs';
 import '../src/scene.js';
@@ -72,6 +73,20 @@ test('Cursor: conversation read from its database, read-only', () => {
   assert.equal(tools[2].op, '运行：npm run build');
   assert.ok(!s.task.ev.some((e) => e.k === 'stop'), 'still generating');
   assert.equal(fs.statSync(P.cursor).mtimeMs, before, 'the database is not written');
+});
+
+test('Gemini CLI: request, actions, a patched result, and a step waiting for approval', () => {
+  const G = new GeminiLive(P.gemini, { hours: 12 }); G.scan(); G.poll();
+  const [s] = G.snapshot();
+  assert.equal(s.id, 'gm:g-0001');
+  assert.equal(s.task.prompt, 'Add a dark theme to the docs site');
+  const tools = s.task.ev.filter((e) => e.k === 'tool');
+  assert.deepEqual(tools.map((e) => e.kind), ['read', 'edit', 'run']);
+  assert.ok(tools[1].tEnd, 'the $patch filled in the result');
+  assert.equal(tools[2].op, '运行：Build the site');
+  const st = Scene.stateOf(s.task, NOW);
+  assert.equal(st.kind, 'wait'); assert.equal(st.approval, true);
+  assert.ok(s.task.tok.total >= 9420);
 });
 
 test('Flow groups actions under the plan steps', () => {

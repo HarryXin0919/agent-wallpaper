@@ -14,7 +14,7 @@ const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-wallpaper-launch-'));
 const P = writeAll(path.join(tmp, 'logs'));
 fs.mkdirSync(path.dirname(out), { recursive: true });
 const electron = createRequire(import.meta.url)('electron');
-const env = { ...process.env, WALL_TEST: path.join(tmp, 'user'), WALL_ROOT: P.claude, WALL_CODEX: P.codex, WALL_CURSOR: P.cursor,
+const env = { ...process.env, WALL_TEST: path.join(tmp, 'user'), WALL_ROOT: P.claude, WALL_CODEX: P.codex, WALL_CURSOR: P.cursor, WALL_GEMINI: P.gemini,
   WALL_CAPTURE: out, WALL_CAPTURE_AFTER: '9000', WALL_EXIT: '1', WALL_NOFOLLOW: '1', WALL_UNCOVERED: '1', WALL_LOG: '1' };
 delete env.ELECTRON_RUN_AS_NODE;
 // LAUNCH_EXE: check a packaged build instead of the source folder
@@ -30,7 +30,7 @@ child.on('exit', (code) => {
   const problems = [];
   if (!fs.existsSync(out)) problems.push('no screenshot');
   if (!state) problems.push('no page state');
-  else if (state.snap < 3) problems.push(`expected 3+ tasks, page had ${state.snap}`);
+  else if (state.snap < 4) problems.push(`expected 4+ tasks, page had ${state.snap}`);
   if (/attach .*"ok":false/.test(log)) problems.push('could not attach to the desktop');
   console.log(state ? `tasks drawn: ${state.snap}, window ${state.W}x${state.H}` : '', '| exit', code);
   if (problems.length) { console.error('LAUNCH CHECK FAILED:', problems.join('; ')); console.error(log.slice(-3000)); process.exit(1); }

@@ -1,8 +1,8 @@
 {
   "name": "agent-wallpaper",
   "private": true,
-  "version": "0.3.0",
-  "description": "A live desktop wallpaper for Windows and macOS that shows what Claude Code, Codex and Cursor are doing, read from their local session logs.",
+  "version": "0.4.0",
+  "description": "A live desktop wallpaper for Windows and macOS that shows what Claude Code, Codex, Gemini CLI and Cursor are doing, read from their local session logs.",
   "license": "MIT",
   "author": "Harry Alexander Xin",
   "repository": {
@@ -13,6 +13,7 @@
     "claude-code",
     "codex",
     "cursor",
+    "gemini",
     "wallpaper",
     "desktop",
     "electron",

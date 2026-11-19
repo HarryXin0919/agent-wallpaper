@@ -3,7 +3,7 @@
 (function () {
   const stage = document.getElementById('stage');
   const wp = document.getElementById('wp');
-  let snap = [], st = { paused: false, text: true, covered: false }, icons = null, frames = 0, lastHTML = '';
+  let snap = [], st = { paused: false, text: true, covered: false }, icons = null, frames = 0, lastHTML = '', moving = true;
 
   window.wall.onData((d) => { snap = d; update(); });
   window.wall.onState((s) => { st = s; update(); });
@@ -111,10 +111,11 @@
     const b = view.brands || {}, u = view.usage || {};
     const uopts = { brands: b, warm: u.warm, hot: u.hot, show: { h5: u.h5 !== false && !(b.claude && b.claude.on === false), week: u.week !== false && !(b.claude && b.claude.on === false), codex: u.codex !== false && !(b.codex && b.codex.on === false) } };
     const usageHTML = showUsage ? `<div class="ucol" data-k="ucol" style="left:${free0.x}px;top:${free0.y + 16}px;width:${free0.w}px">${Glass.usage(usageData, { perMin: sum / 5 }, now, uopts)}</div>` : '';
-    if (!list.length) { const html = usageHTML; if (html !== lastHTML) { const t = document.createElement('div'); t.innerHTML = html; morphChildren(stage, t); lastHTML = html; } sendTargets(); return; }
+    if (!list.length) { moving = false; const html = usageHTML; if (html !== lastHTML) { const t = document.createElement('div'); t.innerHTML = html; morphChildren(stage, t); lastHTML = html; } sendTargets(); return; }
     // working right now (thinking, running, stuck, or waiting for an approval mid-task); a finished turn
     // that is waiting for your reply is not "working" and stays a small card
     const working = list.filter((o) => ['think', 'work', 'stuck'].includes(o.k.kind) || (o.k.kind === 'wait' && o.k.approval)).slice(0, view.maxTasks || 4);
+    moving = working.length > 0; // nothing at work: the animation clock rests
     const free = UH ? { x: free0.x, y: free0.y + UH, w: free0.w, h: free0.h - UH } : free0;
     const tmp = document.createElement('div');
     const small = (skip) => list.filter((o) => !skip.includes(o)).filter((o) => o.k.kind !== 'done' || now - o.k.since < 3 * 3600e3).map((o) => ({ id: o.s.id, title: o.s.title, task: o.s.task }));
@@ -175,7 +176,7 @@
   const ph = (t, ms) => (t % ms) / ms;
   const ease = (x) => 1 - Math.pow(1 - x, 2);
   setInterval(() => {
-    if (st.paused || st.covered || view.motion !== 'full') return;
+    if (st.paused || st.covered || !moving || view.motion !== 'full') return;
     const t = performance.now();
     const a13 = ph(t, 1300);
     root.setProperty('--a18', ease(ph(t, 1800)).toFixed(3));

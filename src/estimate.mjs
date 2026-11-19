@@ -45,7 +45,7 @@ export class Ledger {
   async readFrom(f, k, size) {
     let fh; try { fh = await fs.promises.open(f, 'r'); } catch { return; }
     try {
-      const CH = 4 * 1024 * 1024;
+      const CH = 1024 * 1024;
       while (k.pos < size) {
         const n = Math.min(CH, size - k.pos), buf = Buffer.alloc(n);
         const { bytesRead } = await fh.read(buf, 0, n, k.pos);
