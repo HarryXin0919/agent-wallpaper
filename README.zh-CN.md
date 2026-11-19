@@ -1,3 +1,5 @@
+<img src="build/icon.png" width="96" alt="Agent Wallpaper 图标：一只亮着的灯泡，周围一圈光芒">
+
 # Agent Wallpaper
 
 **Windows 和 macOS 动态桌面壁纸：实时显示 Claude Code、Codex、Gemini CLI、DeepSeek Harness 和 Cursor 正在做的事。**
@@ -21,7 +23,7 @@
 - **仪表盘屏幕：** 在设置里选一块闲置的屏幕，面板会放大铺满整块屏幕，不再避让桌面图标。
 - **点卡片跳转：** 在 Claude 或 Codex 桌面端打开对应的会话。
 - **不挡图标：** 面板只放在桌面最大的空白区域。支持 Wallpaper Engine 等动态壁纸；在 Windows 上，桌面被全屏窗口挡住时自动暂停。
-- **跟随 Claude：** 可以设置成打开 Claude 桌面端时自动出现，退出 Claude 时自动隐藏。
+- **跟随 Claude 和 Codex：** 可以设置成打开任一桌面端时自动出现，两者都退出后自动隐藏。
 - **通知：** 任务完成、等你批准、额度超过你设的提醒线时弹出系统通知。
 - **隐私模式：** 投屏时使用，只显示会话标题和操作类型，不显示提问原文、文件名和命令。
 - **中文或英文，** 显示在主屏幕或所有屏幕，大小、位置、玻璃深浅和动画都可以调。
@@ -67,11 +69,11 @@ npm start
 | AI 来源 | 开关 Claude Code、Codex、Gemini CLI、DeepSeek Harness 和 Cursor，选每个来源的颜色，添加其他记录文件夹（内置分步指南） |
 | 显示 | 语言、位置（自动避开图标，或固定在左 / 中 / 右）、大小、显示在哪块屏幕、仪表盘屏幕、按语言分别设置字体（英文和数字、中文、日文假名、韩文，可选任一已安装字体，或导入 .ttf / .otf / .woff / .woff2 文件）、同时显示几个任务、玻璃深浅、动画 |
 | 用量 | 显示或隐藏用量面板，以及其中每一项额度 |
-| 行为与提醒 | 跟随 Claude 出现和隐藏、准确识别“等你批准”、完成的任务保留多久、各类通知和额度提醒线 |
+| 行为与提醒 | 跟随 Claude 和 Codex 出现和隐藏、准确识别“等你批准”、完成的任务保留多久、各类通知和额度提醒线 |
 | 隐私 | 隐私模式 |
 | 快捷键 | 每个快捷键都可以改：点一下，再按下新的组合键 |
 
-**“打开 Claude 时自动出现”：** 安装版（以及 macOS 版）会把自己设为登录时启动，在托盘里等待，Claude 桌面端打开时显示壁纸。在 Windows 上从源码运行时，改为在“启动”文件夹放一个运行 `app/watch.ps1` 的快捷方式。
+**“打开 Claude 或 Codex 时自动出现”：** 安装版（以及 macOS 版）会把自己设为登录时启动，在托盘里等待，任一桌面端打开时显示壁纸。在 Windows 上从源码运行时，改为在“启动”文件夹放一个运行 `app/watch.ps1` 的快捷方式。
 
 ## 操作
 
@@ -135,7 +137,7 @@ npm start
 | `app/main.mjs` | 托盘、快捷键、屏幕、监听记录、用量、通知、点击 |
 | `app/settings.html`、`app/settings.js` | 设置窗口 |
 | `app/desktop-win.mjs`、`app/desktop-mac.mjs` | 各系统上的桌面位置、鼠标、进程检测 |
-| `app/icons.ps1`、`app/watch.ps1`、`app/startup.ps1` | Windows：图标位置；从源码运行时跟随 Claude 打开 |
+| `app/icons.ps1`、`app/watch.ps1`、`app/startup.ps1` | Windows：图标位置；从源码运行时跟随 Claude 或 Codex 打开 |
 | `test/` | 用虚构记录做的测试，以及启动程序并截屏的启动检查 |
 | `tools/demoframe.mjs`、`tools/demogif.mjs` | 用虚构的任务渲染 README 里的图片和动图 |
 
@@ -152,12 +154,12 @@ npm start
 
 | 选项 | 改动内容 | 撤销方式 |
 |---|---|---|
-| 打开 Claude 时自动出现（默认开） | Windows：安装版添加登录启动项，从源码运行时在“启动”文件夹放一个快捷方式。macOS：添加登录项 | 关掉这个开关 |
+| 打开 Claude 或 Codex 时自动出现（默认开） | Windows：安装版添加登录启动项，从源码运行时在“启动”文件夹放一个快捷方式。macOS：添加登录项 | 关掉这个开关 |
 | 准确识别“等你批准”（默认关） | 在 `~/.claude/settings.json` 里加一个通知钩子（修改前备份为 `settings.json.agent-wallpaper.bak`） | 关掉开关即删除这个钩子 |
 
 ## 卸载
 
-1. 在设置里关掉“准确识别‘等你批准’”（如果打开过）和“打开 Claude 时自动出现”。
+1. 在设置里关掉“准确识别‘等你批准’”（如果打开过）和“打开 Claude 或 Codex 时自动出现”。
 2. 从托盘菜单退出。
 3. **Windows：** 设置 → 应用 → 已安装的应用 → Agent Wallpaper → 卸载（免安装版只有一个文件，直接删除即可）。**macOS：** 把“应用程序”里的 Agent Wallpaper 拖到废纸篓。
 4. 可选：删除设置文件夹，Windows 上是 `%APPDATA%\Agent Wallpaper`，macOS 上是 `~/Library/Application Support/Agent Wallpaper`；如果用过“等你批准”钩子，再删除 `~/.claude/agent-wallpaper`。

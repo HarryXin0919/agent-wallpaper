@@ -1,3 +1,5 @@
+<img src="build/icon.png" width="96" alt="Agent Wallpaper icon: a lit bulb with rays around it">
+
 # Agent Wallpaper
 
 **A live desktop wallpaper for Windows and macOS that shows what Claude Code, Codex, Gemini CLI, DeepSeek Harness and Cursor are doing.**
@@ -21,7 +23,7 @@ It reads the session logs these assistants already keep on your computer and nev
 - **A dashboard screen.** Choose a spare screen in the settings and the panels fill it, bigger, without avoiding icons.
 - **Click a card** to open that session in the Claude or Codex desktop app.
 - **Stays out of the way.** Panels go only into the largest empty part of the desktop. It works over Wallpaper Engine and other live wallpapers, and on Windows it pauses when a full-screen window covers the desktop.
-- **Follows the Claude app.** It can appear when the Claude desktop app opens and go away when it closes.
+- **Follows Claude and Codex.** It can appear when either desktop app opens and go away when both close.
 - **Notifications** when a task finishes, when one waits for your approval, and when a quota passes your limit.
 - **Privacy mode** for screen sharing: only session titles and kinds of action, no request text, file names or commands.
 - **English or Chinese,** one screen or all of them, and adjustable size, position, glass and animation.
@@ -67,11 +69,11 @@ Right-click the tray icon and choose **Settings…** (or press Ctrl + Alt + Shif
 | AI sources | Turn Claude Code, Codex, Gemini CLI, DeepSeek Harness and Cursor on or off, pick each one's color, add more log folders (a step-by-step guide is built in) |
 | Display | Language, position (auto avoids icons, or left / center / right), size, which screens, a dashboard screen, a font per language (English and numbers, Chinese, Japanese kana, Korean: any installed font, or import a .ttf / .otf / .woff / .woff2 file), tasks shown at once, glass depth, animation |
 | Usage | Show or hide the usage panel and each quota |
-| Behavior & alerts | Appear with the Claude app and go away when it quits, exact approval waits, how long finished tasks stay, notifications and the quota alert level |
+| Behavior & alerts | Appear with Claude or Codex and go away when both quit, exact approval waits, how long finished tasks stay, notifications and the quota alert level |
 | Privacy | Privacy mode |
 | Shortcuts | Every shortcut, recorded by pressing the new keys |
 
-**Appear when Claude opens:** the installed program (and the macOS version) adds itself as a login item, waits in the tray, and shows the wallpaper while the Claude desktop app is open. Run from source on Windows, it adds a Startup shortcut to `app/watch.ps1` instead.
+**Appear when Claude or Codex opens:** the installed program (and the macOS version) adds itself as a login item, waits in the tray, and shows the wallpaper while either desktop app is open. Run from source on Windows, it adds a Startup shortcut to `app/watch.ps1` instead.
 
 ## Controls
 
@@ -152,12 +154,12 @@ It changes your system only through these options, each explained next to its sw
 
 | Option | What it changes | Undone by |
 |---|---|---|
-| Appear when Claude opens (on by default) | Windows: a login item for the installed app, or a shortcut in the Startup folder when run from source. macOS: a login item | Turning the switch off |
+| Appear when Claude or Codex opens (on by default) | Windows: a login item for the installed app, or a shortcut in the Startup folder when run from source. macOS: a login item | Turning the switch off |
 | Exact "waiting for your approval" (off by default) | Adds one Notification hook to `~/.claude/settings.json` (a copy is kept as `settings.json.agent-wallpaper.bak`) | Turning the switch off removes the hook |
 
 ## Uninstall
 
-1. In the settings, turn off **Exact "waiting for your approval"** if you turned it on, and **Appear when Claude opens**.
+1. In the settings, turn off **Exact "waiting for your approval"** if you turned it on, and **Appear when Claude or Codex opens**.
 2. Quit from the tray menu.
 3. **Windows:** Settings → Apps → Installed apps → Agent Wallpaper → Uninstall (the portable build is a single file; delete it). **macOS:** drag Agent Wallpaper from Applications to the Trash.
 4. Optional: delete its settings folder, `%APPDATA%\Agent Wallpaper` on Windows or `~/Library/Application Support/Agent Wallpaper` on macOS, and `~/.claude/agent-wallpaper` if the approval hook was used.

@@ -608,7 +608,7 @@ function trayImage(kind) {
   if (kind === 'idle' || MAC) return (trayImgs[kind] = base); // macOS shows a count next to the icon instead
   const { width: w, height: h } = base.getSize(), px = Buffer.from(base.toBitmap());
   const fill = kind === 'approve' ? [0x3c, 0xc9, 0xff] : [0xff, 0xb6, 0x6f]; // BGR of #ffc93c and #6fb6ff
-  const ring = [0x27, 0x1f, 0x1b], cx = w * 0.74, cy = h * 0.74, r = w * 0.25;
+  const ring = [0x27, 0x1f, 0x1b], cx = w * 0.79, cy = h * 0.79, r = w * 0.2; // in the corner, clear of the bulb
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
     const d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy), a = Math.max(0, Math.min(1, r + 0.5 - d));
     if (!a) continue;
