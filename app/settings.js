@@ -7,7 +7,7 @@
     addFolder: '添加文件夹', addHint: '另一个 Claude Code 或 Codex 的记录位置，比如 WSL 里的，或第二个账号的',
     notLogs: '这个文件夹里没有找到 Claude Code（projects）或 Codex（sessions）的记录。请对照下面的指南检查所选的文件夹。',
     guide: '怎么添加？', guideHide: '收起指南',
-    guideLead: 'Claude Code、Codex、Gemini CLI 和 Cursor 的默认记录位置会自动读取，无需添加。只有记录存放在其他位置时才需要手动添加，例如装在 WSL 里，或通过环境变量改过存放位置。目前可以添加的是 Claude Code 和 Codex 的记录。',
+    guideLead: 'Claude Code、Codex、Gemini CLI、DeepSeek Harness 和 Cursor 的默认记录位置会自动读取，无需添加。只有记录存放在其他位置时才需要手动添加，例如装在 WSL 里，或通过环境变量改过存放位置。目前可以添加的是 Claude Code 和 Codex 的记录。',
     steps: (mac) => [
       ['确定记录所在的文件夹', 'Claude Code 的记录在 .claude 文件夹中（内含 projects 子文件夹），Codex 的记录在 .codex 文件夹中（内含 sessions 子文件夹）。常见位置：', true],
       ['点击上方的“添加文件夹”，选中该文件夹', mac
@@ -57,7 +57,7 @@
     addFolder: 'Add a folder', addHint: 'Another Claude Code or Codex log location, such as one inside WSL or a second account',
     notLogs: 'No Claude Code (projects) or Codex (sessions) logs were found in this folder. Check the folder against the guide below.',
     guide: 'How to add one', guideHide: 'Hide the guide',
-    guideLead: 'The usual log locations of Claude Code, Codex, Gemini CLI and Cursor are read automatically and need no adding. Add a folder only when logs are kept somewhere else, for example inside WSL, or moved with an environment variable. Claude Code and Codex logs can be added.',
+    guideLead: 'The usual log locations of Claude Code, Codex, Gemini CLI, DeepSeek Harness and Cursor are read automatically and need no adding. Add a folder only when logs are kept somewhere else, for example inside WSL, or moved with an environment variable. Claude Code and Codex logs can be added.',
     steps: (mac) => [
       ['Find the folder with the logs', 'Claude Code keeps its logs in a .claude folder (with a projects folder inside); Codex in a .codex folder (with a sessions folder inside). Common places:', true],
       ['Click "Add a folder" above and choose it', mac
@@ -123,7 +123,7 @@
       return `<div class="src${x.on ? '' : ' off'}"><span class="dot" style="background:${x.color}"></span><div class="grow"><div class="n"><input class="name" data-name="${k}" value="${esc(x.name)}"><span class="chip">${esc(T.custom)} · ${x.kind === 'claude' ? 'Claude Code' : 'Codex'}</span></div><div class="s">${i.found ? `<em>${esc(T.found)}</em>${i.today != null ? ` · ${esc(T.today(i.today))}` : ''}` : `<em class="no">${esc(T.notFound)}</em>`} · ${esc(x.path)}</div></div>${colors(`custom.${k}.color`, x.color)}${sw(`custom.${k}.on`, x.on)}<button class="del" data-del="${k}" title="×">×</button></div>`;
     }).join('');
     return `<section><h1>${esc(T.ai)}</h1><div class="lead">${esc(T.aiLead)}</div>
-      ${one('claude', 'Claude Code')}${one('codex', 'Codex')}${one('gemini', 'Gemini CLI')}${one('cursor', 'Cursor', `<span class="chip">${esc(T.exp)}</span>`)}${customs}
+      ${one('claude', 'Claude Code')}${one('codex', 'Codex')}${one('gemini', 'Gemini CLI')}${one('deepseek', 'DeepSeek Harness')}${one('cursor', 'Cursor', `<span class="chip">${esc(T.exp)}</span>`)}${customs}
       <button class="add" id="add"><b>＋</b><span>${esc(T.addFolder)} — ${esc(T.addHint)}</span></button>
       <div class="msg">${esc(msg)}</div>
       <button class="link" id="guide">${esc(guideOpen ? T.guideHide : T.guide)}</button>${guideOpen ? guide() : ''}
@@ -211,7 +211,7 @@
       const r = await window.cfg.pickFolder(); if (!r) return;
       if (!r.kind) { msg = T.notLogs; guideOpen = true; draw(); return; }
       msg = '';
-      const n = S.cfg.custom.length + 1, used = new Set([S.cfg.sources.claude.color, S.cfg.sources.codex.color, S.cfg.sources.cursor.color, S.cfg.sources.gemini.color, ...S.cfg.custom.map((x) => x.color)]);
+      const n = S.cfg.custom.length + 1, used = new Set([S.cfg.sources.claude.color, S.cfg.sources.codex.color, S.cfg.sources.cursor.color, S.cfg.sources.gemini.color, S.cfg.sources.deepseek.color, ...S.cfg.custom.map((x) => x.color)]);
       const color = COLORS.find((c) => !used.has(c)) || COLORS[n % COLORS.length];
       const name = (r.kind === 'claude' ? 'Claude Code' : 'Codex') + (/wsl/i.test(r.path) ? ' (WSL)' : ` ${n + 1}`);
       return set({ custom: [...S.cfg.custom, { id: 'c' + Date.now().toString(36).slice(-5), name, kind: r.kind, path: r.path, color, on: true }] });

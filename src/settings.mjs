@@ -10,6 +10,7 @@ export const DEFAULTS = {
     codex: { on: true, color: '#8fc1ff' },
     cursor: { on: false, color: '#b9a2ff' },
     gemini: { on: true, color: '#9fe6d2' },
+    deepseek: { on: true, color: '#ffd27a' },
   },
   custom: [], // extra log folders: [{ id, name, kind: 'claude' | 'codex', path, color, on }]
   lang: 'auto',        // auto | zh | en

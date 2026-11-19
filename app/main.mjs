@@ -12,6 +12,7 @@ import { Live } from '../src/live.mjs';
 import { CodexLive } from '../src/codex.mjs';
 import { CursorLive } from '../src/cursor.mjs';
 import { GeminiLive } from '../src/gemini.mjs';
+import { DeepseekLive, supported as deepseekOk } from '../src/deepseek.mjs';
 import { Ledger, estimate } from '../src/estimate.mjs';
 import * as S from '../src/settings.mjs';
 import * as hooks from '../src/hooks.mjs';
@@ -26,6 +27,7 @@ const unpacked = (p) => p.replace(`app.asar${path.sep}`, `app.asar.unpacked${pat
 const ROOT = process.env.WALL_ROOT || path.join(os.homedir(), '.claude', 'projects');
 const CODEX = process.env.WALL_CODEX || path.join(os.homedir(), '.codex');
 const GEMINI = process.env.WALL_GEMINI || path.join(os.homedir(), '.gemini');
+const DSH = process.env.WALL_DEEPSEEK || path.join(os.homedir(), '.dsh');
 
 // keep Electron's own working files inside this folder, and keep it quiet
 app.setName('Agent Wallpaper');
@@ -68,6 +70,7 @@ function buildSources() {
   const cdb = process.env.WALL_CURSOR || CursorLive.find();
   if ((s.cursor.on || process.env.WALL_CURSOR) && cdb) list.push({ id: 'cursor', name: 'Cursor', color: s.cursor.color, kind: 'cursor', r: reuse('cursor', () => new CursorLive(cdb, { hours: 12 })) });
   if (s.gemini.on && fs.existsSync(path.join(GEMINI, 'tmp'))) list.push({ id: 'gemini', name: 'Gemini', color: s.gemini.color, kind: 'gemini', r: reuse('gemini', () => new GeminiLive(GEMINI, { hours: 12 })) });
+  if (s.deepseek.on && deepseekOk && fs.existsSync(path.join(DSH, 'sessions'))) list.push({ id: 'deepseek', name: 'DeepSeek', color: s.deepseek.color, kind: 'deepseek', r: reuse('deepseek', () => new DeepseekLive(DSH, { hours: 12 })) });
   for (const c of cfg.custom) if (c.on) list.push({ id: 'x' + c.id, name: c.name, color: c.color, kind: c.kind, r: reuse(`x:${c.kind}:${c.path}`, () => (c.kind === 'claude' ? new Live(claudeRoot(c.path), { hours: 12 }) : new CodexLive(codexHome(c.path), { hours: 12 }))) });
   sources = list;
 }
@@ -364,6 +367,7 @@ function openUrl(url) { log('open', url); shell.openExternal(url).catch((e) => l
 function openSession(id) {
   if (id.startsWith('cx:')) return openUrl(`codex://threads/${encodeURIComponent(id.slice(3))}`);
   if (id.startsWith('gm:')) return log('open: Gemini CLI runs in a terminal, nothing to open'); // no app to jump to
+  if (id.startsWith('ds:')) return openUrl('dsh://open'); // DeepSeek Harness: its link brings the app up, not one session
   if (id.startsWith('cu:')) {
     if (MAC) { spawn('/usr/bin/open', ['-a', 'Cursor'], { detached: true, stdio: 'ignore' }).unref(); return; }
     // Cursor's links cannot open one particular conversation, so the app itself is brought up
@@ -419,6 +423,7 @@ function sourceInfo() {
     claude: { found: fs.existsSync(ROOT), path: short(path.dirname(ROOT)), today: count(get('claude')) },
     codex: { found: fs.existsSync(path.join(CODEX, 'sessions')), path: short(CODEX), today: count(get('codex')) },
     gemini: { found: fs.existsSync(path.join(GEMINI, 'tmp')), path: short(GEMINI), today: count(get('gemini')) },
+    deepseek: { found: deepseekOk && fs.existsSync(path.join(DSH, 'sessions')), path: short(DSH), today: count(get('deepseek')) },
     cursor: { found: !!cdb, path: cdb ? short(path.dirname(path.dirname(path.dirname(cdb)))) : '', today: count(get('cursor')) },
     custom: Object.fromEntries(cfg.custom.map((c) => [c.id, { found: fs.existsSync(c.path), today: count(readers.get(`x:${c.kind}:${c.path}`)) }])),
   };

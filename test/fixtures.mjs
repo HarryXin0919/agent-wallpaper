@@ -1,8 +1,9 @@
-// Made-up session logs in the formats Claude Code, Codex and Cursor write, with times relative to `now`.
+// Made-up session logs in the formats Claude Code, Codex, Gemini CLI, DeepSeek Harness and Cursor write, with times relative to `now`.
 // Used by the tests and by the launch check in CI (so a screenshot shows tasks in progress).
 // usage: node test/fixtures.mjs <dir>   → writes <dir>/claude/projects, <dir>/codex/sessions, <dir>/cursor/state.vscdb
 import fs from 'node:fs';
 import path from 'node:path';
+import zlib from 'node:zlib';
 
 const iso = (t) => new Date(t).toISOString();
 const jl = (recs) => recs.map((r) => JSON.stringify(r)).join('\n') + '\n';
@@ -96,6 +97,28 @@ export function geminiLog(now) {
   ];
 }
 
+// DeepSeek Harness: records with ms times, written as zstd frames appended one after another
+export function deepseekLog(now) {
+  const t = (s) => now - s * 1000;
+  let seq = 0; const r = (type, s, data) => ({ type, seq: seq++, time: t(s), data });
+  return [
+    [{ type: 'session', version: 4, id: 'session-d5000000-0000-4000-8000-000000000001', createdAt: t(900), cwd: '/work/api', isSeeded: false, delegationDepth: 0, agentPreset: 'standard' },
+      r('approval/policy', 900, { policy: 'ask' })],
+    [r('turn/start', 600, { turn: 1 }), r('user/message', 600, { role: 'user', id: 'm1', content: [{ type: 'text', text: 'Add rate limiting to the login endpoint' }], source: { kind: 'user' } }),
+      r('user/message', 600, { role: 'user', id: 'm2', content: [{ type: 'text', text: '<time-context>' }], source: { kind: 'time-context' } })],
+    [r('session/title', 590, { title: 'Login rate limit', messageSeqs: [3] }),
+      r('assistant/message', 560, { turn: 1, step: 1, message: { role: 'assistant', content: [{ type: 'reasoning', text: '' }, { type: 'tool-call' }] }, usage: { inputTokens: 12000, outputTokens: 400, cacheReadTokens: 8000, cacheWriteTokens: 0, totalTokens: 12400 } }),
+      r('tool/call', 560, { turn: 1, step: 1, callId: 'c1', name: 'read', arguments: JSON.stringify({ file_path: '/work/api/src/login.ts' }) }),
+      r('tool/result', 559, { turn: 1, step: 1, message: { role: 'tool', toolCallId: 'c1', content: [], isError: false } })],
+    [r('todo/write', 500, { todos: [{ content: 'Read the login handler', status: 'completed' }, { content: 'Add a limiter', status: 'in_progress' }, { content: 'Run the tests', status: 'pending' }] }),
+      r('tool/call', 300, { turn: 1, step: 2, callId: 'c2', name: 'edit', arguments: JSON.stringify({ file_path: '/work/api/src/login.ts', old_string: 'a', new_string: 'a\nb' }) }),
+      r('tool/result', 299, { turn: 1, step: 2, message: { role: 'tool', toolCallId: 'c2', content: [], isError: false } })],
+    [r('tool/call', 20, { turn: 1, step: 3, callId: 'c3', name: 'pwsh', arguments: JSON.stringify({ command: 'npm test', description: 'Run the tests' }) }),
+      r('approval/asked', 19, { id: 'a1', toolName: 'pwsh', callId: 'c3', reason: 'outside the workspace' })],
+  ];
+}
+export const zstdFrames = (groups) => Buffer.concat(groups.map((g) => zlib.zstdCompressSync(Buffer.from(jl(g)))));
+
 export function writeAll(dir, now = Date.now()) {
   const cp = path.join(dir, 'claude', 'projects', 'demo-project');
   fs.mkdirSync(cp, { recursive: true });
@@ -108,9 +131,12 @@ export function writeAll(dir, now = Date.now()) {
   const gp = path.join(dir, 'gemini', 'tmp', 'abc', 'chats');
   fs.mkdirSync(gp, { recursive: true });
   fs.writeFileSync(path.join(gp, 'session-2026-11-19T10-00-g0001.jsonl'), jl(geminiLog(now)));
+  const dp = path.join(dir, 'dsh', 'sessions', '--work-api--', 'session-d5000000-0000-4000-8000-000000000001');
+  fs.mkdirSync(dp, { recursive: true });
+  fs.writeFileSync(path.join(dp, 'session.v4.jsonl.zstd'), zstdFrames(deepseekLog(now)));
   fs.mkdirSync(path.join(dir, 'cursor'), { recursive: true });
   cursorDb(path.join(dir, 'cursor', 'state.vscdb'), now);
-  return { claude: path.join(dir, 'claude', 'projects'), codex: path.join(dir, 'codex'), cursor: path.join(dir, 'cursor', 'state.vscdb'), gemini: path.join(dir, 'gemini') };
+  return { claude: path.join(dir, 'claude', 'projects'), codex: path.join(dir, 'codex'), cursor: path.join(dir, 'cursor', 'state.vscdb'), gemini: path.join(dir, 'gemini'), deepseek: path.join(dir, 'dsh') };
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1'))) {

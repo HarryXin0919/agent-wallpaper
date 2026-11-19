@@ -14,7 +14,7 @@ const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-wallpaper-launch-'));
 const P = writeAll(path.join(tmp, 'logs'));
 fs.mkdirSync(path.dirname(out), { recursive: true });
 const electron = createRequire(import.meta.url)('electron');
-const env = { ...process.env, WALL_TEST: path.join(tmp, 'user'), WALL_ROOT: P.claude, WALL_CODEX: P.codex, WALL_CURSOR: P.cursor, WALL_GEMINI: P.gemini,
+const env = { ...process.env, WALL_TEST: path.join(tmp, 'user'), WALL_ROOT: P.claude, WALL_CODEX: P.codex, WALL_CURSOR: P.cursor, WALL_GEMINI: P.gemini, WALL_DEEPSEEK: P.deepseek,
   WALL_CAPTURE: out, WALL_CAPTURE_AFTER: '9000', WALL_EXIT: '1', WALL_NOFOLLOW: '1', WALL_UNCOVERED: '1', WALL_LOG: '1' };
 delete env.ELECTRON_RUN_AS_NODE;
 // LAUNCH_EXE: check a packaged build instead of the source folder

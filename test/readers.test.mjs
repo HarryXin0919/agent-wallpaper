@@ -9,6 +9,8 @@ import { Live } from '../src/live.mjs';
 import { CodexLive, cmdLabel } from '../src/codex.mjs';
 import { CursorLive } from '../src/cursor.mjs';
 import { GeminiLive } from '../src/gemini.mjs';
+import { DeepseekLive, unframe } from '../src/deepseek.mjs';
+import { deepseekLog, zstdFrames } from './fixtures.mjs';
 import { Ledger, estimate, calibrate } from '../src/estimate.mjs';
 import * as S from '../src/settings.mjs';
 import '../src/scene.js';
@@ -87,6 +89,34 @@ test('Gemini CLI: request, actions, a patched result, and a step waiting for app
   const st = Scene.stateOf(s.task, NOW);
   assert.equal(st.kind, 'wait'); assert.equal(st.approval, true);
   assert.ok(s.task.tok.total >= 9420);
+});
+
+test('DeepSeek Harness: zstd frames, the request, the plan, and an exact approval wait', () => {
+  const D = new DeepseekLive(P.deepseek, { hours: 12 }); D.scan(); D.poll();
+  const [s] = D.snapshot();
+  assert.equal(s.id, 'ds:d5000000-0000-4000-8000-000000000001');
+  assert.equal(s.title, 'Login rate limit');
+  assert.equal(s.task.prompt, 'Add rate limiting to the login endpoint'); // the time-context record is not a request
+  const tools = s.task.ev.filter((e) => e.k === 'tool');
+  assert.deepEqual(tools.map((e) => e.kind), ['read', 'plan', 'edit', 'run']);
+  assert.ok(tools[0].tEnd && tools[2].tEnd);
+  assert.equal(tools[3].op, '运行：Run the tests');
+  assert.equal(s.task.plan.length, 3);
+  const m = Flow.model(s.task, NOW);
+  assert.deepEqual(m.plan.map((p) => p.text), ['Read the login handler', 'Add a limiter', 'Run the tests']); // the checklist shows as the steps
+  assert.ok(m.steps.some((x) => x.title === 'Add a limiter'));
+  assert.equal(s.task.tok.total, 12400);
+  const st = Scene.stateOf(s.task, NOW);
+  assert.equal(st.kind, 'wait'); assert.equal(st.approval, true);
+});
+
+test('DeepSeek Harness: a frame still being written is read on the next look', () => {
+  const all = zstdFrames(deepseekLog(NOW));
+  const first = unframe(all.subarray(0, all.length - 7)); // the last frame is cut short
+  assert.ok(first.used > 0 && first.used < all.length);
+  const rest = unframe(all.subarray(first.used));
+  assert.equal(rest.used, all.length - first.used);
+  assert.equal(first.lines.length + rest.lines.length, deepseekLog(NOW).flat().length);
 });
 
 test('Flow groups actions under the plan steps', () => {

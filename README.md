@@ -1,6 +1,6 @@
 # Agent Wallpaper
 
-**A live desktop wallpaper for Windows and macOS that shows what Claude Code, Codex, Gemini CLI and Cursor are doing.**
+**A live desktop wallpaper for Windows and macOS that shows what Claude Code, Codex, Gemini CLI, DeepSeek Harness and Cursor are doing.**
 
 [![CI](https://github.com/HarryXin0919/agent-wallpaper/actions/workflows/ci.yml/badge.svg)](https://github.com/HarryXin0919/agent-wallpaper/actions/workflows/ci.yml) [![Release](https://img.shields.io/github/v/release/HarryXin0919/agent-wallpaper)](https://github.com/HarryXin0919/agent-wallpaper/releases/latest) · [中文说明](README.zh-CN.md)
 
@@ -12,7 +12,7 @@ It reads the session logs these assistants already keep on your computer. It nev
 
 ## Features
 
-- **Claude Code, Codex, Gemini CLI and Cursor side by side.** Each source has its own color (Claude coral, Codex blue by default). When several tasks run at once, each gets its own lane. Extra log folders (a second account, Claude Code inside WSL) can be added.
+- **Claude Code, Codex, Gemini CLI, DeepSeek Harness and Cursor side by side.** Each source has its own color (Claude coral, Codex blue by default). When several tasks run at once, each gets its own lane. Extra log folders (a second account, Claude Code inside WSL) can be added.
 - **Progress you can read at a glance.** The plan the agent keeps (Claude's task list, Codex's plan) becomes a progress bar with the current step and how long it has taken.
 - **Every action as a card.** Reads, searches, edits (+/− lines), commands, subagents, web lookups and thinking time, newest last; the running one glows.
 - **States:** thinking, running a command, waiting for your approval, maybe stuck, done. Approval waits can be reported exactly by an optional Claude Code hook (below).
@@ -60,7 +60,7 @@ Right-click the tray icon and choose **Settings…** (or press Ctrl + Alt + Shif
 
 | Page | What you can change |
 |---|---|
-| AI sources | Turn Claude Code, Codex, Gemini CLI and Cursor on or off, pick each one's color, add more log folders |
+| AI sources | Turn Claude Code, Codex, Gemini CLI, DeepSeek Harness and Cursor on or off, pick each one's color, add more log folders (a step-by-step guide is built in) |
 | Display | Language, position (auto avoids icons, or left / center / right), size, which screens, tasks shown at once, glass depth, animation |
 | Usage | Show or hide the usage panel and each quota |
 | Behavior & alerts | Appear with the Claude app and go away when it quits, exact approval waits, how long finished tasks stay, notifications and the quota alert level |
@@ -94,6 +94,7 @@ If the panels do not appear on Windows, the tray menu has **Can't see it? Try an
 | Claude tasks | `~/.claude/projects/**/*.jsonl` |
 | Codex tasks and Codex quota | `~/.codex/sessions/**/rollout-*.jsonl` (Codex records its quota with every reply) |
 | Gemini CLI tasks | `~/.gemini/tmp/*/chats/session-*.jsonl` (Gemini CLI marks a step that waits for approval, so that one is exact) |
+| DeepSeek Harness tasks | `~/.dsh/sessions/*/session-*/session.v4.jsonl.zstd` (zstd-compressed; DeepSeek Harness records each permission prompt, so approval waits are exact) |
 | Cursor tasks (experimental) | Cursor's `User/globalStorage/state.vscdb`, opened read-only. Cursor stores no reliable per-action times, so actions are timed by when the wallpaper first sees them |
 | Claude quota | A local usage service if one is running (below); otherwise the Claude desktop app's own record, `plan-usage-history.json` in its app-data folder |
 | Tokens per task, live rate | Counted from the logs |
@@ -117,6 +118,7 @@ If the panels do not appear on Windows, the tray menu has **Can't see it? Try an
 | `src/parse.mjs`, `src/live.mjs` | Read Claude Code logs as they grow |
 | `src/codex.mjs` | Read Codex logs into the same timeline |
 | `src/gemini.mjs` | Read Gemini CLI sessions |
+| `src/deepseek.mjs` | Read DeepSeek Harness sessions |
 | `src/cursor.mjs` | Read Cursor's agent conversations (read-only SQLite) |
 | `src/hooks.mjs` | The optional approval hook |
 | `src/estimate.mjs` | Claude quota estimate between readings |
@@ -134,7 +136,7 @@ If the panels do not appear on Windows, the tray menu has **Can't see it? Try an
 
 ## Not affiliated
 
-Agent Wallpaper is an independent project. It is not made by or affiliated with Anthropic, OpenAI, Google or Anysphere. Claude, Claude Code, Codex, Gemini and Cursor are trademarks of their owners.
+Agent Wallpaper is an independent project. It is not made by or affiliated with Anthropic, OpenAI, Google, DeepSeek or Anysphere. Claude, Claude Code, Codex, Gemini, DeepSeek and Cursor are trademarks of their owners.
 
 ## License
 
