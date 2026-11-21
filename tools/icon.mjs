@@ -31,9 +31,10 @@ const SMALL = { n: 7, k: 5, from: 206, gap: 36, len: 40, w: 26, r: 78 };
 
 // small: the simpler drawing; bleed: the tile fills the image (tray), else it keeps a margin (app icon)
 // even: the lit rays are the middle ones (the light spreads from the top to both sides) instead of the first ones
-export function icon({ small = false, bleed = false, even = false, pal = BLUE } = {}) {
+export function icon({ small = false, bleed = false, even = false, pal = BLUE, lit = null } = {}) {
   const TILE = pal.tile, LIGHT = pal.light, DIM = pal.dim, BASE = pal.base;
-  const C = 256, A = small ? SMALL : FULL, bar = small ? 26 : 17, gap = small ? 0 : 6;
+  const C = 256, A = { ...(small ? SMALL : FULL) }; if (lit != null) A.k = lit; // lit: how many rays are lit (the tray shows real progress)
+  const bar = small ? 26 : 17, gap = small ? 0 : 6;
   // the whole mark is centred in the tile: from the tip of the top ray to the bottom of the base
   const up = A.r + A.gap + A.len + A.w / 2;
   const down = glass(C, 0, A.r).ny + (small ? bar / 2 + 5 + bar / 2 : bar / 2 + gap + (bar + gap) * 2 - 3 + bar * 0.375);
@@ -73,5 +74,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   await png('assets/tray-64.png', 64, { bleed: true });
   await png('assets/tray.png', 32, { small: true, bleed: true });
   await png('assets/tray-16.png', 16, { small: true, bleed: true });
+  // the tray while tasks run: one picture for each number of lit rays, 0 to 7
+  for (let k = 0; k <= SMALL.n; k++) { await png(`assets/tray-p${k}.png`, 32, { small: true, bleed: true, lit: k }); await png(`assets/tray16-p${k}.png`, 16, { small: true, bleed: true, lit: k }); }
   await b.close();
 }

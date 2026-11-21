@@ -64,7 +64,7 @@ const names = ['This PC', 'Recycle Bin', 'Projects', 'Notes', 'Design', 'Photos'
 const rows = Math.floor((H - 56) / 107);
 const icons = names.map((n, i) => ({ n, x: 4 + Math.floor(i / rows) * 77, y: 6 + (i % rows) * 107, w: 77, h: 107 }));
 const bg = 'radial-gradient(1200px 700px at 78% 18%, #f2b28c 0%, rgba(242,178,140,0) 60%), radial-gradient(900px 600px at 20% 85%, #3c6e8f 0%, rgba(60,110,143,0) 65%), linear-gradient(160deg, #24344d 0%, #47506e 45%, #b77a6a 100%)';
-const html = `<!doctype html><meta charset="utf-8"><style>${fs.readFileSync(path.join(here, '../src/glass.css'), 'utf8')}</style>
+const html = `<!doctype html><meta charset="utf-8"><style>${fs.readFileSync(path.join(here, '../src/glass.css'), 'utf8')}${process.env.EXTRA_CSS ? fs.readFileSync(process.env.EXTRA_CSS, 'utf8') : '' /* EXTRA_CSS: a stylesheet to try on top */}</style>
 <div style="position:fixed;inset:0;background:${bg}"></div><div id="stage"></div>
 <style>.di{position:absolute;width:74px;display:flex;flex-direction:column;align-items:center;gap:5px;z-index:9}.di i{width:46px;height:46px;border-radius:10px;background:linear-gradient(160deg,rgba(255,255,255,.55),rgba(255,255,255,.22));box-shadow:0 2px 6px rgba(0,0,0,.35)}.di span{font:12px "Segoe UI";color:#fff;text-align:center;line-height:1.25;text-shadow:0 1px 3px rgba(0,0,0,.9)}</style>
 ${icons.map((i) => `<div class="di" style="left:${i.x}px;top:${i.y}px"><i></i><span>${i.n}</span></div>`).join('')}

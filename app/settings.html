@@ -76,6 +76,9 @@ select:hover { background-color: var(--fill-h); }
 option, optgroup { background: var(--panel); color: var(--text); }
 select[data-font] { width: 240px; max-width: 240px; }
 input[type=range] { width: 180px; accent-color: var(--acc); }
+input.text { all: unset; box-sizing: border-box; width: 300px; max-width: 46%; padding: 6px 10px; border-radius: 7px; background: var(--fill); font-size: 12.5px; cursor: text; user-select: text; overflow: hidden; text-overflow: ellipsis; }
+input.text:focus { outline: 2px solid var(--acc); outline-offset: 0; }
+input.text::placeholder { color: var(--faint); }
 .val { color: var(--dim); font-size: 12px; width: 42px; text-align: right; font-variant-numeric: tabular-nums; }
 .key { all: unset; min-width: 170px; text-align: center; padding: 5px 11px; border-radius: 6px; background: var(--fill); font: 12px "Cascadia Mono", Consolas, monospace; cursor: pointer; }
 .key:hover { background: var(--fill-h); }

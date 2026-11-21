@@ -2,7 +2,7 @@
 // Reads their local logs (read-only). The pages make no network requests: anything that is not a local file is
 // blocked. The main process reads an optional usage service on this computer (127.0.0.1:8787) and, for updates,
 // GitHub Releases (app/update.mjs).
-import { app, BrowserWindow, Tray, Menu, globalShortcut, screen, nativeImage, nativeTheme, session, ipcMain, shell, Notification, dialog } from 'electron';
+import { app, BrowserWindow, Tray, Menu, globalShortcut, screen, nativeImage, nativeTheme, net, session, ipcMain, shell, Notification, dialog } from 'electron';
 import path from 'node:path';
 import os from 'node:os';
 import fs from 'node:fs';
@@ -21,6 +21,9 @@ import * as fonts from '../src/fonts.mjs';
 import { createUpdater } from './update.mjs';
 import { forecast, record, SPANS } from '../src/forecast.mjs';
 import '../src/scene.js';  // Scene.stateOf, for notifications
+import '../src/flow.js';   // Flow.progress, for the tray icon
+import { sendPush } from '../src/push.mjs';
+import { makeReport } from './report.mjs';
 import '../src/i18n.js';   // I18N
 import desk from './platform.mjs'; // Windows or macOS desktop layer
 
@@ -358,8 +361,8 @@ function watchStates(list) {
     const was = seenStates.get(s.id);
     const name = s.task.brand ? s.task.brand.name : 'Claude';
     const what = cfg.privacy ? s.title || t().task : s.title || String(s.task.prompt || '').split('\n')[0].slice(0, 80);
-    if (cfg.notify.done && was && was.kind === 'work' && (kind === 'done' || kind === 'wait') && !k.abandoned && k.why !== 'interrupted') notify(t().nDone(name), what, () => openSession(s.id));
-    if (cfg.notify.approval && kind === 'approve' && !(was && was.kind === 'approve' && was.tool === next.get(s.id).tool)) notify(t().nApprove(name), what, () => openSession(s.id));
+    if (cfg.notify.done && was && was.kind === 'work' && (kind === 'done' || kind === 'wait') && !k.abandoned && k.why !== 'interrupted') { notify(t().nDone(name), what, () => openSession(s.id)); pushOut('done', t().nDone(name), what); }
+    if (cfg.notify.approval && kind === 'approve' && !(was && was.kind === 'approve' && was.tool === next.get(s.id).tool)) { notify(t().nApprove(name), what, () => openSession(s.id)); pushOut('approval', t().nApprove(name), what); }
   }
   seenStates = next;
 }
@@ -529,6 +532,20 @@ ipcMain.handle('cfg:update', () => (up ? up.state() : null));
 ipcMain.handle('cfg:checkUpdate', () => { if (up) up.check(true); return true; });
 ipcMain.handle('cfg:installUpdate', () => { if (up) up.install(); return true; });
 ipcMain.handle('cfg:openReleases', () => { if (up) up.openPage(); return true; });
+// Phone push (off unless turned on in the settings): the alert goes to the address the person entered and nowhere
+// else, without the task's title unless that is turned on too. The address holds a key, so it is not logged.
+function pushOut(kind, title, what) {
+  const p = cfg.push;
+  if (!p.on || !p.url || (kind === 'done' && !p.done)) return;
+  sendPush(net, p.url, title, p.detail ? what : '').then((r) => log('push', kind, r.ok ? 'sent' : 'failed', r.status));
+}
+ipcMain.handle('cfg:testPush', async () => (cfg.push.url ? sendPush(net, cfg.push.url, 'Agent Wallpaper', I18N.lang === 'en' ? 'Push works.' : '推送可以正常送达。') : { ok: false, status: 'address' }));
+// today's report as a picture: saved to Pictures, copied, and shown in its folder
+async function todayReport(out) {
+  const r = await makeReport({ list: snapAll(), usage, lang: I18N.lang, stateOf: Scene.stateOf, iconFile: path.join(here, '..', 'assets', 'tray-64.png'), out: out || undefined, reveal: !out });
+  if (!out) notify(t().reportTitle, t().reportSaved);
+  return r;
+}
 ipcMain.handle('cfg:testNotify', () => { notify('Agent Wallpaper', I18N.lang === 'en' ? 'Notifications are working.' : '通知可以正常显示。'); return true; });
 
 function applyCfg(prev) {
@@ -602,12 +619,16 @@ function standing(list = visibleSnap(), now = Date.now()) {
 }
 // the tray icon with a dot: green while something is at work, amber when something waits for your approval
 const trayImgs = {};
-function trayImage(kind) {
-  if (trayImgs[kind]) return trayImgs[kind];
-  const base = nativeImage.createFromPath(path.join(here, '..', 'assets', MAC ? 'tray-16.png' : 'tray.png'));
-  if (kind === 'idle' || MAC) return (trayImgs[kind] = base); // macOS shows a count next to the icon instead
+// While tasks run, the icon's rays show how far along they are (k of 7 lit; pictures made by tools/icon.mjs). An
+// amber dot is drawn into the corner when one waits for your approval.
+function trayImage(kind, k) {
+  const key = kind + (k == null ? '' : k);
+  if (trayImgs[key]) return trayImgs[key];
+  const file = k == null ? (MAC ? 'tray-16.png' : 'tray.png') : MAC ? `tray16-p${k}.png` : `tray-p${k}.png`;
+  const base = nativeImage.createFromPath(path.join(here, '..', 'assets', file));
+  if (kind !== 'approve' || MAC) return (trayImgs[key] = base); // macOS shows a count next to the icon instead
   const { width: w, height: h } = base.getSize(), px = Buffer.from(base.toBitmap());
-  const fill = kind === 'approve' ? [0x3c, 0xc9, 0xff] : [0x8e, 0xe6, 0x6b]; // BGR of #ffc93c (amber) and #6be68e (green)
+  const fill = [0x3c, 0xc9, 0xff]; // BGR of #ffc93c (amber)
   const ring = [0x27, 0x1f, 0x1b], cx = w * 0.79, cy = h * 0.79, r = w * 0.2; // in the corner, clear of the bulb
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
     const d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy), a = Math.max(0, Math.min(1, r + 0.5 - d));
@@ -616,7 +637,17 @@ function trayImage(kind) {
     for (let ch = 0; ch < 3; ch++) px[i + ch] = Math.round(c[ch] * a + px[i + ch] * (1 - a));
     px[i + 3] = Math.round(255 * a + px[i + 3] * (1 - a));
   }
-  return (trayImgs[kind] = nativeImage.createFromBitmap(px, { width: w, height: h }));
+  return (trayImgs[key] = nativeImage.createFromBitmap(px, { width: w, height: h }));
+}
+// how many of the tray icon's 7 rays are lit: the average progress of the tasks at work
+function litRays(list, now = Date.now()) {
+  let sum = 0, n = 0;
+  for (const x of list) {
+    const st = Scene.stateOf(x.task, now);
+    if (st.kind === 'done' || (st.kind === 'wait' && !st.approval)) continue;
+    sum += globalThis.Flow.progress(x.task, now).pct; n++;
+  }
+  return n ? Math.max(0, Math.min(7, Math.round((sum / n / 100) * 7))) : 0;
 }
 function trayTip(s) {
   const l = t();
@@ -630,11 +661,13 @@ function trayTip(s) {
   if (p && p.fh != null) lines.push(l.tipQuota(Math.round(Math.max(0, 100 - p.fh))) + (f && f.beforeReset ? ' · ' + l.runsOut(I18N.mins(f.outAt - Date.now())) : ''));
   return lines.join('\n').slice(0, 127);
 }
-let trayKind = 'idle';
+let trayKey = 'idle';
 function trayStatus(list) {
   if (!tray) return;
+  list = list || visibleSnap();
   const s = standing(list), kind = s.approve.length ? 'approve' : s.work ? 'work' : 'idle';
-  if (kind !== trayKind) { trayKind = kind; tray.setImage(trayImage(kind)); }
+  const k = kind === 'idle' ? null : litRays(list), key = kind + k;
+  if (key !== trayKey) { trayKey = key; tray.setImage(trayImage(kind, k)); }
   if (MAC) tray.setTitle(s.approve.length ? ` ${s.approve.length}!` : s.work ? ` ${s.work}` : '');
   tray.setToolTip(trayTip(s));
   if (panelWin && !panelWin.isDestroyed()) panelWin.webContents.send('standing', s);
@@ -713,6 +746,7 @@ function menu() {
   const l = t(), k = cfg.keys, s = standing(), waiting = s.approve.length + s.reply.length;
   trayMenu = Menu.buildFromTemplate([
     { label: l.peek, accelerator: k.peek, registerAccelerator: false, click: togglePeek },
+    { label: l.report, click: () => todayReport().catch((err) => log('report failed', String(err))) },
     ...(waiting ? [{ label: l.jumpTo(waiting), accelerator: k.jump, registerAccelerator: false, click: jump }] : []),
     { type: 'separator' },
     { label: shown ? l.hide : l.show, accelerator: k.show, registerAccelerator: false, click: () => setShown(!shown) },
@@ -836,7 +870,8 @@ app.whenReady().then(() => {
       if (settingsWin && !settingsWin.isDestroyed()) fs.writeFileSync(process.env.WALL_CAPTURE.replace(/\.png$/, '-settings.png'), (await settingsWin.webContents.capturePage()).toPNG());
       if (panelWin && !panelWin.isDestroyed()) fs.writeFileSync(process.env.WALL_CAPTURE.replace(/\.png$/, '-panel.png'), (await panelWin.webContents.capturePage()).toPNG());
       if (peekWin && !peekWin.isDestroyed()) fs.writeFileSync(process.env.WALL_CAPTURE.replace(/\.png$/, '-peek.png'), (await peekWin.webContents.capturePage()).toPNG());
-      for (const k of ['work', 'approve']) fs.writeFileSync(process.env.WALL_CAPTURE.replace(/\.png$/, `-tray-${k}.png`), trayImage(k).toPNG());
+      for (const [k, n] of [['work', 2], ['work', 5], ['approve', 4]]) fs.writeFileSync(process.env.WALL_CAPTURE.replace(/\.png$/, `-tray-${k}${n}.png`), trayImage(k, n).toPNG());
+      if (process.env.WALL_REPORT) log('report', (await todayReport(process.env.WALL_REPORT)).file);
       log('captured', process.env.WALL_CAPTURE);
     } catch (e) { log('capture failed', String(e)); }
     if (process.env.WALL_EXIT) quit();

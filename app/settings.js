@@ -49,6 +49,10 @@
     exactNote: '会修改 Claude Code 的设置文件',
     exact: '准确识别“等你批准”', exactS: '在 Claude Code 的设置（~/.claude/settings.json）里加一个通知钩子：Claude 弹出权限提示时，记一行到 ~/.claude/agent-wallpaper/events.jsonl。不打开时，按“步骤超过 8 秒、命令超过 40 秒没结果”推断。关掉时会删掉这个钩子。',
     nDone: '任务完成时通知', nApprove: '等你批准时通知', nQuota: '额度快用完时通知', nQuotaS: '每个额度周期只提醒一次',
+    push: '推送到手机', pushS: '有任务等你批准时，把提醒发到你填写的地址。支持 Bark（iOS）、ntfy 和企业微信群机器人，其他地址按通用的 JSON 方式发送。提醒只发往这个地址。',
+    pushUrl: '推送地址', pushUrlS: 'Bark：https://api.day.app/你的密钥；ntfy：https://ntfy.sh/你的主题；企业微信：群机器人的 Webhook 地址。地址里通常带有密钥，只保存在本机的设置文件里。',
+    pushDetail: '包含任务标题', pushDetailS: '关闭时只发送“Claude 在等你批准”这样的一句话，不带任何任务内容',
+    pushDone: '任务完成时也推送', pushTest: '发送测试推送', pushOk: '已发出，请看手机', pushFail: (s) => ({ address: '地址不可用，请检查', timeout: '连接超时', network: '连不上这个地址' }[s] || `对方返回了错误（${s}）`),
     nAt: '提醒线', test: '发送测试通知',
     upd: '自动检查更新', updS: '每 6 小时到 GitHub 查一次新版本。安装版会在后台下载，退出时自动安装；免安装版和 macOS 版只提醒你去下载。',
     updNow: '立即检查', updInstall: (v) => `重启并更新到 ${v}`, updGet: (v) => `下载 ${v}`,
@@ -109,6 +113,10 @@
     exactNote: 'Changes Claude Code\'s settings file',
     exact: 'Exact "waiting for your approval"', exactS: 'Adds a notification hook to Claude Code\'s settings (~/.claude/settings.json): when Claude shows a permission prompt, one line goes to ~/.claude/agent-wallpaper/events.jsonl. Without it, approval waits are inferred (a step pending over 8 s, a command over 40 s). Turning it off removes the hook.',
     nDone: 'Notify when a task finishes', nApprove: 'Notify when approval is needed', nQuota: 'Notify when a quota runs low', nQuotaS: 'Once per quota period',
+    push: 'Push to your phone', pushS: 'When a task needs your approval, the alert is sent to the address you enter. Bark (iOS), ntfy and WeCom group robots are recognised; any other address gets a plain JSON POST. The alert goes to this address only.',
+    pushUrl: 'Push address', pushUrlS: 'Bark: https://api.day.app/your-key; ntfy: https://ntfy.sh/your-topic; WeCom: the group robot\'s webhook address. The address usually holds a key; it is kept only in the settings file on this computer.',
+    pushDetail: 'Include the task title', pushDetailS: 'Off: only a line like "Claude needs your approval" is sent, nothing of the task itself',
+    pushDone: 'Also push when a task finishes', pushTest: 'Send a test push', pushOk: 'Sent. Check your phone', pushFail: (s) => ({ address: 'The address is not usable', timeout: 'Timed out', network: 'Could not reach the address' }[s] || `The service answered with an error (${s})`),
     nAt: 'Alert at', test: 'Send a test notification',
     upd: 'Check for updates automatically', updS: 'Looks for a new version on GitHub every 6 hours. The installed build downloads it in the background and installs it when the program quits; the portable and macOS builds only tell you to download it.',
     updNow: 'Check now', updInstall: (v) => `Restart to update to ${v}`, updGet: (v) => `Download ${v}`,
@@ -121,7 +129,7 @@
     press: 'Press a combination…', version: (v) => `Version ${v}`,
   };
   const COLORS = ['#f4a98c', '#8fc1ff', '#b9a2ff', '#9fe6d2', '#ffd27a', '#ff9fb8'];
-  let S = null, tab = 'ai', T = ZH, msg = '', recording = null, guideOpen = false;
+  let S = null, tab = 'ai', T = ZH, msg = '', recording = null, guideOpen = false, pushMsg = '';
   const $ = (h) => { const d = document.createElement('div'); d.innerHTML = h.trim(); return d.firstChild; };
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -264,6 +272,10 @@
       <div class="box">${row(T.nDone, '', sw('notify.done', n.done))}${row(T.nApprove, '', sw('notify.approval', n.approval))}${row(T.nQuota, T.nQuotaS, sw('notify.quota', n.quota))}
         ${row(T.nAt, '', seg('notify.quotaAt', { 70: '70%', 80: '80%', 90: '90%' }, n.quotaAt))}
         <div class="row"><div class="l"></div><button class="btn" id="test">${esc(T.test)}</button></div></div>
+      <div class="box">${row(T.push, T.pushS, sw('push.on', c.push.on))}
+        <div class="row"><div class="l"><b>${esc(T.pushUrl)}${info(T.pushUrlS)}</b></div><input class="text" data-text="push.url" value="${esc(c.push.url)}" placeholder="https://" spellcheck="false" autocomplete="off"></div>
+        ${row(T.pushDetail, T.pushDetailS, sw('push.detail', c.push.detail))}${row(T.pushDone, '', sw('push.done', c.push.done))}
+        <div class="row"><div class="l"><span>${esc(pushMsg)}</span></div><button class="btn" id="pushTest"${c.push.url ? '' : ' disabled'}>${esc(T.pushTest)}</button></div></div>
       <div class="box">${row(T.upd, T.updS, sw('updates.check', c.updates.check))}${updRow()}</div></section>`;
   }
   // where the update stands, with the one button that fits
@@ -325,6 +337,7 @@
     if (b.dataset.del) { const list = S.cfg.custom.filter((_, i) => i !== +b.dataset.del); return set({ custom: list }); }
     if (b.dataset.key) { recording = recording === b.dataset.key ? null : b.dataset.key; draw(); return; }
     if (b.id === 'test') return window.cfg.testNotify();
+    if (b.id === 'pushTest') { pushMsg = '…'; draw(); const r = await window.cfg.testPush(); pushMsg = r.ok ? T.pushOk : T.pushFail(r.status); draw(); return; }
     if (b.id === 'fontMore') { moreFonts = !moreFonts; draw(); return; }
     if (b.dataset.delfont) { merge(await window.cfg.removeFont(b.dataset.delfont)); msg = ''; draw(); return; }
     if (b.id === 'updNow') return window.cfg.checkUpdate();
@@ -344,6 +357,7 @@
   document.addEventListener('input', (e) => { if (e.target.id === 'scale') document.getElementById('scaleV').textContent = e.target.value + '%'; });
   document.addEventListener('change', async (e) => {
     if (e.target.id === 'scale') return set({ scale: Number(e.target.value) / 100 });
+    if (e.target.dataset.text) { pushMsg = ''; return set(patchFor(e.target.dataset.text, e.target.value.trim())); }
     if (e.target.dataset.font) {
       const slot = e.target.dataset.font, v = e.target.value;
       msg = '';

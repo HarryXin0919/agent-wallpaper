@@ -19,7 +19,9 @@ It reads the session logs these assistants already keep on your computer and nev
 - **Every action as a card.** Reads, searches, edits (+/− lines), commands, subagents, web lookups and thinking time, newest last; the running one glows.
 - **States:** thinking, running a command, waiting for your approval, maybe stuck, done. Approval waits can be reported exactly by an optional Claude Code hook (below).
 - **Usage panel:** Claude's 5-hour and weekly quota, Codex's quota, tokens used today and a live tokens-per-minute figure. When a quota will run out before it resets at the current pace, it says when ("runs out in ~1 h 40 min").
-- **Works with one screen too.** The tray icon shows a green dot while something is at work and an amber one when something waits for your approval, and its tooltip sums it up. A click on it opens a small panel with the quotas and every task (waiting for you, at work, just finished); a click on a task opens it. **Full view** (Ctrl + Alt + Shift + Space) shows the whole picture over all windows until Esc. **Open the waiting task** (Ctrl + Alt + Shift + J) jumps to the task that has waited longest for you.
+- **Works with one screen too.** While tasks run, the rays of the tray icon light up with their progress; an amber dot appears when something waits for your approval, and the tooltip sums it up. A click on it opens a small panel with the quotas and every task (waiting for you, at work, just finished); a click on a task opens it. **Full view** (Ctrl + Alt + Shift + Space) shows the whole picture over all windows until Esc. **Open the waiting task** (Ctrl + Alt + Shift + J) jumps to the task that has waited longest for you.
+- **Push to your phone (optional, off by default).** When a task needs your approval, an alert can go to Bark (iOS), ntfy, a WeCom group robot or any JSON webhook. By default it carries no task content.
+- **Today's report.** The tray menu makes a picture of the day in numbers (tasks, working time, tokens per assistant), saved to Pictures and copied to the clipboard. No requests, file names or commands are in it.
 - **A dashboard screen.** Choose a spare screen in the settings and the panels fill it, bigger, without avoiding icons.
 - **Click a card** to open that session in the Claude or Codex desktop app.
 - **Stays out of the way.** Panels go only into the largest empty part of the desktop. It works over Wallpaper Engine and other live wallpapers, and on Windows it pauses when a full-screen window covers the desktop.
@@ -148,6 +150,7 @@ If the panels do not appear on Windows, the tray menu has **Can't see it? Try an
 This program does not transfer any information about you or your work to other networked systems. Everything it shows is read from files on your own computer. It contacts only:
 
 - `github.com`, to check for and download new versions of itself (every 6 hours; can be turned off in the settings). These are ordinary requests for the release files and carry no data from your computer.
+- the push address you enter, and only if you turn on **Push to your phone**. It receives the alert line ("Claude needs your approval"), plus the task's title only if you turn that on.
 - `127.0.0.1:8787`, on your own computer, and only if you run the optional local usage service described above.
 
 It changes your system only through these options, each explained next to its switch in the settings:
