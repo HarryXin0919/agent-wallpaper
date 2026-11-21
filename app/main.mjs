@@ -777,6 +777,7 @@ app.whenReady().then(() => {
   up.schedule(cfg.updates.check);
   menu();
   if (process.env.WALL_FONT) log('font import', addFont(process.env.WALL_FONT, process.env.WALL_FONT_SLOT || 'cjk')); // for testing: import this font file for a language
+  if (/^(light|dark)$/.test(process.env.WALL_THEME || '')) nativeTheme.themeSource = process.env.WALL_THEME; // for testing: force a theme
   if (process.env.WALL_PANEL) setTimeout(togglePanel, 1500); // for testing: open the pop-up panel
   if (process.env.WALL_PEEK) setTimeout(togglePeek, 1500); // for testing: open the peek view
   if (process.env.WALL_SETTINGS) { // for testing; a page name (ai, look, usage, behave, privacy, keys) opens that page

@@ -100,6 +100,11 @@ input[type=range] { width: 180px; accent-color: var(--acc); }
 .colors button { all: unset; width: 14px; height: 14px; border-radius: 50%; cursor: pointer; opacity: .55; transition: opacity .15s; }
 .colors button:hover { opacity: 1; }
 .colors button.on { opacity: 1; box-shadow: 0 0 0 2px var(--panel), 0 0 0 3.5px var(--text); }
+/* six swatches on every row is a lot to look at: only the chosen colour shows until the row is pointed at or focused */
+.src .colors button:not(.on) { display: none; }
+.src:hover .colors button, .src:focus-within .colors button { display: block; }
+.src:not(:hover):not(:focus-within) .colors button.on { box-shadow: none; }
+.src > .dot { display: none; } /* the chosen swatch on the right already shows the colour */
 .del { all: unset; width: 24px; height: 24px; border-radius: 6px; display: grid; place-items: center; color: var(--dim); cursor: pointer; font-size: 16px; }
 .del:hover { background: var(--fill-h); color: var(--text); }
 .name { all: unset; font-weight: 500; border-bottom: 1px solid transparent; min-width: 60px; max-width: 220px; }

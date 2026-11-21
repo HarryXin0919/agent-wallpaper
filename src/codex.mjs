@@ -21,6 +21,16 @@ function strArg(code, key) {
   return q.slice(1, -1).replace(/\\n/g, '\n').replace(/\\(.)/g, '$1');
 }
 
+// What a script fed to a program is about: its first comment, else the first file it names, else its first statement
+function scriptGist(body) {
+  const lines = body.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  const note = lines.find((l) => /^(#|\/\/)\s*\S/.test(l) && !/^#!|coding[:=]/.test(l));
+  if (note) return note.replace(/^(#|\/\/)\s*/, '');
+  const file = (body.match(/['"`](?:[^'"`\n]*[\\/])?([\w.-]+\.[A-Za-z][A-Za-z0-9]{0,4})['"`]/) || [])[1];
+  if (file) return file;
+  return lines.find((l) => !/^(import\s|from\s+\S+\s+import|(const|let|var)\s.*require\(|os\.chdir)/.test(l)) || '';
+}
+
 // The statement of a script that says what it does: setup lines ($x = 'value') are skipped, an assignment from a
 // command keeps the command, and long program paths shrink to the program's name (python, node, pwsh).
 export function cmdLabel(c) {
@@ -32,7 +42,14 @@ export function cmdLabel(c) {
   for (let i = 0; i < parts.length; i++) {
     const s = parts[i];
     // a here-string (@' … '@ | python -) is a script fed to a program: name the program
-    if (/^@['"]$/.test(s)) { const end = parts.slice(i + 1).find((x) => /^['"]@\s*\|/.test(x)); return end ? '脚本 → ' + short(end.replace(/^['"]@\s*\|\s*/, '')) : '一段脚本'; }
+    if (/^@['"]$/.test(s)) {
+      const end = parts.slice(i + 1).find((x) => /^['"]@\s*\|/.test(x));
+      if (!end) return '一段脚本';
+      const prog = short(end.replace(/^['"]@\s*\|\s*/, ''));
+      // say what the script is about, not only which program runs it
+      const body = (String(c).match(/@(['"])\r?\n([\s\S]*?)\r?\n\1@\s*\|/) || [])[2], gist = body ? scriptGist(body) : '';
+      return gist ? `${prog.split(/\s+/)[0]} · ${gist}` : '脚本 → ' + prog;
+    }
     const m = s.match(/^\$[\w:]+\s*=\s*(.*)$/);
     if (!m) return short(s);
     if (/^(&|Get-|Select-|Set-|New-|Remove-|Copy-|Move-|Invoke-|Test-|Start-|git|node|python|npm|rg)\b/i.test(m[1])) return short(m[1]);

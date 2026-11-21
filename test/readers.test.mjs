@@ -60,6 +60,10 @@ test('Codex: request text, actions, quota and title', () => {
 test('Codex: command labels skip setup lines and shorten program paths', () => {
   assert.equal(cmdLabel("$ErrorActionPreference='Stop'\n& 'C:\\Program Files\\Python\\python.exe' build.py"), 'python build.py');
   assert.equal(cmdLabel("$x = 'D:\\a'; Get-Content -Raw 'D:\\notes\\a.md'"), "Get-Content -Raw a.md");
+  // a script fed to a program: its comment, else the file it works on, else its first statement
+  assert.equal(cmdLabel("@'\n# count the open issues\nimport json\nprint(1)\n'@ | python -B -"), 'python · count the open issues');
+  assert.equal(cmdLabel("@'\nimport os\ns = open('tools/icon.mjs').read()\n'@ | & 'C:\\Python\\python.exe' -B -"), 'python · icon.mjs');
+  assert.equal(cmdLabel("@'\nimport sys\nprint(sys.version)\n'@ | python -"), 'python · print(sys.version)');
 });
 
 test('Cursor: conversation read from its database, read-only', () => {
