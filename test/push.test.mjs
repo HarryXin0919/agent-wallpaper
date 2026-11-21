@@ -32,12 +32,16 @@ test('sending: the answer is reported, and a failure never throws', async () => 
   assert.deepEqual(await sendPush(ok, 'nonsense', 'A', 'B'), { ok: false, status: 'address' });
 });
 
-test('the push setting: off by default, and off without a usable address', () => {
+test('the push setting: off by default, off without a usable address, off until the address is verified', () => {
   const base = S.load(path.join(os.tmpdir(), 'no-such-settings.json'));
-  assert.deepEqual(base.push, { on: false, url: '', detail: false, done: false });
+  assert.deepEqual(base.push, { on: false, url: '', verified: '', detail: false, done: false });
   assert.equal(S.apply(base, { push: { on: true, url: 'javascript:alert(1)' } }).push.on, false);
   const on = S.apply(base, { push: { on: true, url: ' https://api.day.app/KEY ' } });
-  assert.equal(on.push.url, 'https://api.day.app/KEY'); assert.equal(on.push.on, true);
+  assert.equal(on.push.url, 'https://api.day.app/KEY');
+  assert.equal(on.push.on, false, 'not verified yet: it stays off');
+  const ok = S.apply(on, { push: { verified: 'https://api.day.app/KEY', on: true } });
+  assert.equal(ok.push.on, true);
+  assert.equal(S.apply(ok, { push: { url: 'https://api.day.app/OTHER' } }).push.on, false, 'a changed address needs a new check');
 });
 
 test("today's report: counts per assistant, and nothing of the tasks' text", () => {

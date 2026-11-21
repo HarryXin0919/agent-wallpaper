@@ -2,7 +2,7 @@
 // Reads their local logs (read-only). The pages make no network requests: anything that is not a local file is
 // blocked. The main process reads an optional usage service on this computer (127.0.0.1:8787) and, for updates,
 // GitHub Releases (app/update.mjs).
-import { app, BrowserWindow, Tray, Menu, globalShortcut, screen, nativeImage, nativeTheme, net, session, ipcMain, shell, Notification, dialog } from 'electron';
+import { app, BrowserWindow, Tray, Menu, globalShortcut, screen, nativeImage, nativeTheme, session, ipcMain, shell, Notification, dialog } from 'electron';
 import path from 'node:path';
 import os from 'node:os';
 import fs from 'node:fs';
@@ -534,12 +534,30 @@ ipcMain.handle('cfg:installUpdate', () => { if (up) up.install(); return true; }
 ipcMain.handle('cfg:openReleases', () => { if (up) up.openPage(); return true; });
 // Phone push (off unless turned on in the settings): the alert goes to the address the person entered and nowhere
 // else, without the task's title unless that is turned on too. The address holds a key, so it is not logged.
+// (sent through a session of its own: the default one lets the pages load local files only, which would stop it)
+const pushNet = () => session.fromPartition('agent-wallpaper-push');
 function pushOut(kind, title, what) {
   const p = cfg.push;
   if (!p.on || !p.url || (kind === 'done' && !p.done)) return;
-  sendPush(net, p.url, title, p.detail ? what : '').then((r) => log('push', kind, r.ok ? 'sent' : 'failed', r.status));
+  sendPush(pushNet(), p.url, title, p.detail ? what : '').then((r) => log('push', kind, r.ok ? 'sent' : 'failed', r.status));
 }
-ipcMain.handle('cfg:testPush', async () => (cfg.push.url ? sendPush(net, cfg.push.url, 'Agent Wallpaper', I18N.lang === 'en' ? 'Push works.' : '推送可以正常送达。') : { ok: false, status: 'address' }));
+// Before push can be turned on, the address is checked: a 4-digit code is sent to it and the person types in what
+// arrived. A service answering "ok" does not show that the right phone got it, and a mistyped address would
+// otherwise send the alerts to someone else. Changing the address needs a new check (src/settings.mjs).
+let pushCheck = null; // { url, code, at }
+ipcMain.handle('cfg:testPush', async () => {
+  const url = cfg.push.url;
+  if (!url) return { ok: false, status: 'address' };
+  const code = String(Math.floor(1000 + Math.random() * 9000));
+  const r = await sendPush(pushNet(), url, 'Agent Wallpaper', (I18N.lang === 'en' ? 'Verification code: ' : '验证码：') + code);
+  if (r.ok) pushCheck = { url, code, at: Date.now() };
+  return r;
+});
+ipcMain.handle('cfg:verifyPush', (_e, code) => {
+  const ok = !!pushCheck && pushCheck.url === cfg.push.url && Date.now() - pushCheck.at < 10 * 60e3 && String(code).trim() === pushCheck.code;
+  if (ok) { const prev = cfg; cfg = S.apply(cfg, { push: { verified: cfg.push.url, on: true } }); S.save(SETTINGS, cfg); applyCfg(prev); pushCheck = null; }
+  return cfgState({ verified: ok });
+});
 // today's report as a picture: saved to Pictures, copied, and shown in its folder
 async function todayReport(out) {
   const r = await makeReport({ list: snapAll(), usage, lang: I18N.lang, stateOf: Scene.stateOf, iconFile: path.join(here, '..', 'assets', 'tray-64.png'), out: out || undefined, reveal: !out });

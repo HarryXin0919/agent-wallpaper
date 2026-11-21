@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld('cfg', {
   removeFont: (id) => ipcRenderer.invoke('cfg:removeFont', id),
   testNotify: () => ipcRenderer.invoke('cfg:testNotify'),
   testPush: () => ipcRenderer.invoke('cfg:testPush'),
+  verifyPush: (code) => ipcRenderer.invoke('cfg:verifyPush', code),
   update: () => ipcRenderer.invoke('cfg:update'),
   checkUpdate: () => ipcRenderer.invoke('cfg:checkUpdate'),
   installUpdate: () => ipcRenderer.invoke('cfg:installUpdate'),

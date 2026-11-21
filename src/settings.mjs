@@ -34,7 +34,8 @@ export const DEFAULTS = {
   keepDone: 15,        // minutes a finished task stays clear before it fades
   waitDone: 2,         // hours a turn waiting for your reply counts as still open
   // phone push: alerts go to the address the person entered (Bark, ntfy, a WeCom robot, or any JSON webhook)
-  push: { on: false, url: '', detail: false, done: false },
+  // `verified` is the address that passed the check (a code sent to it and typed back); push can only be on for that one
+  push: { on: false, url: '', verified: '', detail: false, done: false },
   dashboard: 'none',   // a screen (display id) drawn as a dashboard: no icons to avoid, bigger panels
   keys: { show: 'Ctrl+Alt+Shift+W', peek: 'Ctrl+Alt+Shift+Space', jump: 'Ctrl+Alt+Shift+J', pause: 'Ctrl+Alt+Shift+P', text: 'Ctrl+Alt+Shift+H', settings: 'Ctrl+Alt+Shift+S', quit: 'Ctrl+Alt+Shift+Q' },
 };
@@ -53,7 +54,8 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, Number(v) || a));
 function tidy(s) {
   s.scale = clamp(s.scale, 0.8, 1.4);
   s.push.url = /^https?:\/\/\S+$/i.test(String(s.push.url || '').trim()) ? String(s.push.url).trim().slice(0, 500) : '';
-  if (!s.push.url) s.push.on = false;
+  s.push.verified = String(s.push.verified || '').slice(0, 500);
+  if (!s.push.url || s.push.verified !== s.push.url) s.push.on = false;
   s.dashboard = /^(none|\d{1,20})$/.test(String(s.dashboard)) ? String(s.dashboard) : 'none';
   s.maxTasks = Math.round(clamp(s.maxTasks, 1, 4));
   s.keepDone = clamp(s.keepDone, 1, 24 * 60);
