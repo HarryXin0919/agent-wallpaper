@@ -2,7 +2,7 @@
 // Reads their local logs (read-only). The pages make no network requests: anything that is not a local file is
 // blocked. The main process reads an optional usage service on this computer (127.0.0.1:8787) and, for updates,
 // GitHub Releases (app/update.mjs).
-import { app, BrowserWindow, Tray, Menu, globalShortcut, screen, nativeImage, session, ipcMain, shell, Notification, dialog } from 'electron';
+import { app, BrowserWindow, Tray, Menu, globalShortcut, screen, nativeImage, nativeTheme, session, ipcMain, shell, Notification, dialog } from 'electron';
 import path from 'node:path';
 import os from 'node:os';
 import fs from 'node:fs';
@@ -479,7 +479,7 @@ const displayInfo = () => screen.getAllDisplays().map((d, i) => ({ id: String(d.
 function openSettings() {
   if (settingsWin && !settingsWin.isDestroyed()) { settingsWin.show(); settingsWin.focus(); return; }
   settingsWin = new BrowserWindow({
-    width: 940, height: 680, minWidth: 820, minHeight: 560, title: 'Agent Wallpaper', backgroundColor: '#12161d', show: false, autoHideMenuBar: true,
+    width: 940, height: 680, minWidth: 820, minHeight: 560, title: 'Agent Wallpaper', backgroundColor: nativeTheme.shouldUseDarkColors ? '#1c1c1e' : '#f5f5f7', show: false, autoHideMenuBar: true, // the page follows the system's light or dark
     icon: path.join(here, '..', 'assets', 'tray-64.png'),
     webPreferences: { preload: path.join(here, 'settings-preload.cjs'), contextIsolation: true, sandbox: true, spellcheck: false },
   });

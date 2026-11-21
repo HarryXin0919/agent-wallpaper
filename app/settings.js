@@ -46,6 +46,7 @@
     followClose: '退出 Claude 时一起关闭',
     keep: '完成后保持清晰', keepS: '之后慢慢变淡，12 小时后消失', keepO: { 15: '15 分钟', 60: '1 小时', 180: '3 小时' },
     waitDone: '等你回复多久算完成', waitDoneS: '做完一轮、在等你回复的任务，超过这个时间就当作已完成', waitO: { 1: '1 小时', 2: '2 小时', 6: '6 小时' },
+    exactNote: '会修改 Claude Code 的设置文件',
     exact: '准确识别“等你批准”', exactS: '在 Claude Code 的设置（~/.claude/settings.json）里加一个通知钩子：Claude 弹出权限提示时，记一行到 ~/.claude/agent-wallpaper/events.jsonl。不打开时，按“步骤超过 8 秒、命令超过 40 秒没结果”推断。关掉时会删掉这个钩子。',
     nDone: '任务完成时通知', nApprove: '等你批准时通知', nQuota: '额度快用完时通知', nQuotaS: '每个额度周期只提醒一次',
     nAt: '提醒线', test: '发送测试通知',
@@ -105,6 +106,7 @@
     followClose: 'Close when Claude quits',
     keep: 'Finished tasks stay clear for', keepS: 'Then they fade, and disappear after 12 hours', keepO: { 15: '15 min', 60: '1 hour', 180: '3 hours' },
     waitDone: 'A waiting turn counts as done after', waitDoneS: 'A task that finished a turn and waits for your reply', waitO: { 1: '1 hour', 2: '2 hours', 6: '6 hours' },
+    exactNote: 'Changes Claude Code\'s settings file',
     exact: 'Exact "waiting for your approval"', exactS: 'Adds a notification hook to Claude Code\'s settings (~/.claude/settings.json): when Claude shows a permission prompt, one line goes to ~/.claude/agent-wallpaper/events.jsonl. Without it, approval waits are inferred (a step pending over 8 s, a command over 40 s). Turning it off removes the hook.',
     nDone: 'Notify when a task finishes', nApprove: 'Notify when approval is needed', nQuota: 'Notify when a quota runs low', nQuotaS: 'Once per quota period',
     nAt: 'Alert at', test: 'Send a test notification',
@@ -129,7 +131,10 @@
   async function set(patch) { merge(await window.cfg.set(patch)); draw(); }
   const seg = (path, opts, cur) => `<div class="seg">${(Array.isArray(opts) ? opts : Object.entries(opts)).map(([v, l]) => `<button data-set="${path}" data-v="${esc(v)}" class="${String(cur) === String(v) ? 'on' : ''}">${esc(l)}</button>`).join('')}</div>`;
   const sw = (path, on, dis) => `<button class="sw${on ? ' on' : ''}" data-tog="${path}"${dis ? ' disabled' : ''}></button>`;
-  const row = (title, sub, ctl) => `<div class="row"><div class="l"><b>${esc(title)}</b>${sub ? `<span>${esc(sub)}</span>` : ''}</div>${ctl}</div>`;
+  // an explanation, kept behind a small (i) next to its title: shown on hover or keyboard focus
+  const info = (text) => (text ? `<button class="info" data-tip="${esc(text)}" aria-label="${esc(text)}"></button>` : '');
+  // note: a line that stays visible (for a setting that changes something outside this program)
+  const row = (title, sub, ctl, note) => `<div class="row"><div class="l"><b>${esc(title)}${info(sub)}</b>${note ? `<span>${esc(note)}</span>` : ''}</div>${ctl}</div>`;
   const colors = (path, cur) => `<div class="colors">${COLORS.map((c) => `<button data-set="${path}" data-v="${c}" style="background:${c}" class="${c === cur ? 'on' : ''}"></button>`).join('')}</div>`;
 
   function sources() {
@@ -143,12 +148,11 @@
       const i = inf.custom[x.id] || {};
       return `<div class="src${x.on ? '' : ' off'}"><span class="dot" style="background:${x.color}"></span><div class="grow"><div class="n"><input class="name" data-name="${k}" value="${esc(x.name)}"><span class="chip">${esc(T.custom)} · ${x.kind === 'claude' ? 'Claude Code' : 'Codex'}</span></div><div class="s">${i.found ? `<em>${esc(T.found)}</em>${i.today != null ? ` · ${esc(T.today(i.today))}` : ''}` : `<em class="no">${esc(T.notFound)}</em>`} · ${esc(x.path)}</div></div>${colors(`custom.${k}.color`, x.color)}${sw(`custom.${k}.on`, x.on)}<button class="del" data-del="${k}" title="×">×</button></div>`;
     }).join('');
-    return `<section><h1>${esc(T.ai)}</h1><div class="lead">${esc(T.aiLead)}</div>
-      ${one('claude', 'Claude Code')}${one('codex', 'Codex')}${one('gemini', 'Gemini CLI')}${one('deepseek', 'DeepSeek Harness')}${one('cursor', 'Cursor', `<span class="chip">${esc(T.exp)}</span>`)}${customs}
-      <button class="add" id="add"><b>＋</b><span>${esc(T.addFolder)} — ${esc(T.addHint)}</span></button>
+    return `<section><h1>${esc(T.ai)}${info(T.aiLead)}</h1>
+      ${one('claude', 'Claude Code')}${one('codex', 'Codex')}${one('gemini', 'Gemini CLI')}${one('deepseek', 'DeepSeek Harness')}${one('cursor', 'Cursor', `<span class="chip">${esc(T.exp)}</span>${info(T.cursorNote)}`)}${customs}
+      <div class="addrow"><button class="add" id="add"><b>＋</b><span>${esc(T.addFolder)}</span></button>${info(T.addHint)}</div>
       <div class="msg">${esc(msg)}</div>
-      <button class="link" id="guide">${esc(guideOpen ? T.guideHide : T.guide)}</button>${guideOpen ? guide() : ''}
-      <div class="note">${esc(T.cursorNote)}</div></section>`;
+      <button class="link" id="guide">${esc(guideOpen ? T.guideHide : T.guide)}</button>${guideOpen ? guide() : ''}</section>`;
   }
   // step-by-step help for adding a folder (opens by itself when a chosen folder had no logs)
   function guide() {
@@ -221,7 +225,7 @@
     const pre = window.FontSlots ? FontSlots.apply(document, S.fontView || [], () => { if (tab === 'look') draw(); }) : '';
     const files = S.fontFiles || [];
     return `<div class="box">
-      <div class="row"><div class="l"><b>${esc(T.font)}</b><span>${esc(T.fontS)}</span></div></div>
+      <div class="row"><div class="l"><b>${esc(T.font)}${info(T.fontS)}</b></div></div>
       ${slots.map((k) => row(T.slot[k], T.slotS[k] || '', fontSelect(k))).join('')}
       ${more && !moreFonts ? '' : `<div class="row"><div class="l"></div><button class="link" id="fontMore">${esc(more ? T.fontLess : T.fontMore)}</button></div>`}
       <div class="sample" style="font-family:${esc(pre)}${BASE}"><b>${esc(T.fontSample)}</b><span>${esc(T.fontSample2)}</span>${more ? `<span class="s3">${esc(T.fontSample3)}</span>` : ''}</div>
@@ -232,7 +236,7 @@
     const c = S.cfg;
     const scr = [['primary', T.primary], ['all', T.all]]; // a list: screen ids are numbers and would sort first in an object
     if (S.displays.length > 1) S.displays.forEach((d) => scr.push([d.id, T.screenN(d.label, d.size)]));
-    return `<section><h1>${esc(T.look)}</h1><div class="lead">${esc(T.lookLead)}</div>
+    return `<section><h1>${esc(T.look)}${info(T.lookLead)}</h1>
       <div class="box">
         ${row(T.lang, T.langS, seg('lang', { auto: T.auto, zh: '中文', en: 'English' }, c.lang))}
         ${row(T.pos, T.posS, seg('position', T.posO, c.position))}
@@ -247,16 +251,16 @@
   }
   function usage() {
     const u = S.cfg.usage;
-    return `<section><h1>${esc(T.usage)}</h1><div class="lead">${esc(T.usageLead)}</div>
+    return `<section><h1>${esc(T.usage)}${info(T.usageLead)}</h1>
       <div class="box">${row(T.showUsage, T.showUsageS, sw('usage.show', u.show))}</div>
       <div class="box">${row(T.gH5, '', sw('usage.h5', u.h5, !u.show))}${row(T.gWeek, '', sw('usage.week', u.week, !u.show))}${row(T.gCodex, '', sw('usage.codex', u.codex, !u.show))}</div></section>`;
   }
   function behave() {
     const c = S.cfg, n = c.notify;
-    return `<section><h1>${esc(T.behave)}</h1><div class="lead">${esc(T.behaveLead)}</div>
+    return `<section><h1>${esc(T.behave)}${info(T.behaveLead)}</h1>
       <div class="box">${row(T.followOpen, T.followOpenS, sw('follow.open', c.follow.open))}${row(T.followClose, '', sw('follow.close', c.follow.close))}</div>
       <div class="box">${row(T.keep, T.keepS, seg('keepDone', T.keepO, c.keepDone))}${row(T.waitDone, T.waitDoneS, seg('waitDone', T.waitO, c.waitDone))}</div>
-      <div class="box">${row(T.exact, T.exactS, sw('exactApproval', c.exactApproval))}</div>
+      <div class="box">${row(T.exact, T.exactS, sw('exactApproval', c.exactApproval), T.exactNote)}</div>
       <div class="box">${row(T.nDone, '', sw('notify.done', n.done))}${row(T.nApprove, '', sw('notify.approval', n.approval))}${row(T.nQuota, T.nQuotaS, sw('notify.quota', n.quota))}
         ${row(T.nAt, '', seg('notify.quotaAt', { 70: '70%', 80: '80%', 90: '90%' }, n.quotaAt))}
         <div class="row"><div class="l"></div><button class="btn" id="test">${esc(T.test)}</button></div></div>
@@ -270,17 +274,30 @@
     return `<div class="row"><div class="l"><span>${esc(T.version(u.current || S.version))}${label ? ' · ' + esc(label) : ''}</span></div>${btn}</div>`;
   }
   function privacy() {
-    return `<section><h1>${esc(T.privacy)}</h1><div class="lead">${esc(T.privacyLead)}</div>
-      <div class="box">${row(T.priv, T.privS, sw('privacy', S.cfg.privacy))}</div><div class="note">${esc(T.privNote)}</div></section>`;
+    return `<section><h1>${esc(T.privacy)}${info(T.privacyLead)}</h1>
+      <div class="box">${row(T.priv, T.privS + ' ' + T.privNote, sw('privacy', S.cfg.privacy))}</div></section>`;
   }
   function keys() {
     const k = S.cfg.keys, ok = S.keysOk || {};
-    return `<section><h1>${esc(T.keys)}</h1><div class="lead">${esc(T.keysLead)}</div><div class="box">
+    return `<section><h1>${esc(T.keys)}${info(T.keysLead)}</h1><div class="box">
       ${Object.keys(T.keyNames).map((name) => row(T.keyNames[name], ok[name] === false ? T.taken : '', `<button class="key${recording === name ? ' rec' : ''}${ok[name] === false ? ' bad' : ''}" data-key="${name}">${esc(recording === name ? T.press : k[name])}</button>`)).join('')}
       </div></section>`;
   }
 
+  const tip = document.createElement('div'); tip.id = 'tip'; tip.hidden = true; document.body.appendChild(tip);
+  function showTip(el) {
+    tip.textContent = el.dataset.tip; tip.hidden = false;
+    const r = el.getBoundingClientRect(), t = tip.getBoundingClientRect();
+    const x = Math.max(12, Math.min(r.left - 12, innerWidth - t.width - 12)), below = r.bottom + 8;
+    tip.style.left = x + 'px'; tip.style.top = (below + t.height > innerHeight - 8 ? r.top - t.height - 8 : below) + 'px';
+  }
+  const tipOf = (e) => (e.target.closest ? e.target.closest('.info') : null);
+  document.addEventListener('mouseover', (e) => { const el = tipOf(e); if (el) showTip(el); });
+  document.addEventListener('mouseout', (e) => { if (tipOf(e)) tip.hidden = true; });
+  document.addEventListener('focusin', (e) => { const el = tipOf(e); if (el && el.matches(':focus-visible')) showTip(el); });
+  document.addEventListener('focusout', (e) => { if (tipOf(e)) tip.hidden = true; });
   function draw() {
+    tip.hidden = true;
     T = S.lang === 'en' ? EN : ZH;
     document.documentElement.lang = S.lang === 'en' ? 'en' : 'zh-CN';
     const nav = document.getElementById('nav');
