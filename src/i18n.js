@@ -109,5 +109,14 @@
   const reset = (s) => { const t = T(); return s == null ? '' : s < 3600 ? t.resetMin(Math.max(1, Math.round(s / 60))) : s < 86400 ? t.resetH(Math.round(s / 3600)) : t.resetD(Math.round(s / 86400)); };
   // "auto" follows the system language: Chinese for zh-*, English otherwise
   const pick = (want, locale) => (want === 'zh' || want === 'en' ? want : /^zh/i.test(locale || '') ? 'zh' : 'en');
-  root.I18N = { set: (l) => { lang = l === 'en' ? 'en' : 'zh'; }, get lang() { return lang; }, get t() { return T(); }, op, dur, mins, tok, ago, reset, pick };
+  // a shortcut as it is written on this system: the accelerator text (Ctrl+Alt+Shift+W) on Windows, the key symbols
+  // (⌃⌥⇧W) on macOS. The settings keep the accelerator form; this is only for showing it.
+  const onMac = typeof process !== 'undefined' && process.platform ? process.platform === 'darwin' : typeof navigator !== 'undefined' && /^Mac/.test(navigator.platform || '');
+  const MAC_MODS = { Ctrl: '⌃', Control: '⌃', Alt: '⌥', Option: '⌥', Shift: '⇧', Super: '⌘', Meta: '⌘', Cmd: '⌘', Command: '⌘', CmdOrCtrl: '⌘', CommandOrControl: '⌘' };
+  function keyLabel(k, mac = onMac) {
+    if (!k || !mac) return k || '';
+    const parts = String(k).split('+'), key = parts.pop();
+    return parts.map((p) => MAC_MODS[p] || p + '+').join('') + key;
+  }
+  root.I18N = { set: (l) => { lang = l === 'en' ? 'en' : 'zh'; }, get lang() { return lang; }, get t() { return T(); }, op, dur, mins, tok, ago, reset, pick, keyLabel };
 })(typeof window !== 'undefined' ? window : globalThis);

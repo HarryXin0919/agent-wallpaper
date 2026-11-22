@@ -92,7 +92,7 @@
   function draw() {
     const now = Date.now();
     el.innerHTML = quotas(now) + tasks(now)
-      + `<div class="acts"><button data-act="peek">${esc(T.peek)}${keys.peek ? `<kbd>${esc(keys.peek)}</kbd>` : ''}</button><button data-act="settings">${esc(T.settings)}</button></div>`;
+      + `<div class="acts"><button data-act="peek">${esc(T.peek)}${keys.peek ? `<kbd>${esc(I18N.keyLabel(keys.peek))}</kbd>` : ''}</button><button data-act="settings">${esc(T.settings)}</button></div>`;
     const h = el.offsetHeight;
     if (h !== lastH) { lastH = h; window.panel.size(h); }
   }

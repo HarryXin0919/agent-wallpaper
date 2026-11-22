@@ -56,6 +56,8 @@ function frontmost() {
 export const desktopUnder = () => frontmost() === 'com.apple.finder';
 
 // is the Claude desktop app running? (not the `claude` command-line tool)
+// -a: macOS pgrep leaves out its own ancestors, so without it Claude is missed when this program was started from
+// inside it (e.g. by Claude Code in the desktop app)
 export function claudeDesktopRunning() {
-  try { execFileSync('/usr/bin/pgrep', ['-x', 'Claude'], { timeout: 2000, stdio: 'ignore' }); return true; } catch { return false; }
+  try { execFileSync('/usr/bin/pgrep', ['-a', '-x', 'Claude'], { timeout: 2000, stdio: 'ignore' }); return true; } catch { return false; }
 }
