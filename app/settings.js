@@ -320,7 +320,7 @@
   function keys() {
     const k = S.cfg.keys, ok = S.keysOk || {};
     return `<section><h1>${esc(T.keys)}${info(T.keysLead)}</h1><div class="box">
-      ${Object.keys(T.keyNames).map((name) => row(T.keyNames[name], ok[name] === false ? T.taken : '', `<button class="key${recording === name ? ' rec' : ''}${ok[name] === false ? ' bad' : ''}" data-key="${name}">${esc(recording === name ? T.press : k[name])}</button>`)).join('')}
+      ${Object.keys(T.keyNames).map((name) => row(T.keyNames[name], ok[name] === false ? T.taken : '', `<button class="key${recording === name ? ' rec' : ''}${ok[name] === false ? ' bad' : ''}" data-key="${name}">${esc(recording === name ? T.press : I18N.keyLabel(k[name]))}</button>`)).join('')}
       </div></section>`;
   }
 

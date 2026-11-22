@@ -189,3 +189,11 @@ test('English labels for the Chinese action names', () => {
   I18N.set('zh');
   assert.equal(I18N.tok(3.4e7), '3400 万');
 });
+
+test('Shortcuts are shown with key symbols on macOS and as typed elsewhere', () => {
+  assert.equal(I18N.keyLabel('Ctrl+Alt+Shift+Space', true), '⌃⌥⇧Space');
+  assert.equal(I18N.keyLabel('Super+Shift+J', true), '⌘⇧J');
+  assert.equal(I18N.keyLabel('Ctrl+Alt+Shift+Space', false), 'Ctrl+Alt+Shift+Space');
+  assert.equal(I18N.keyLabel('', true), '');
+  assert.equal(I18N.keyLabel(undefined, false), '');
+});

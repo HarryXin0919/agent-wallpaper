@@ -173,7 +173,7 @@
     const found = w.found && w.found.length ? l.welcomeFound(w.found.join(root.I18N.lang === 'en' ? ', ' : '、')) : l.welcomeNone;
     return `<div class="col v" data-k="col" style="left:${free.x}px;top:${free.y}px;width:${free.w}px;height:${free.h}px">
       <div class="hero panel welcome" data-k="welcome"><div class="title">${esc(l.welcome)}</div><div class="wl">${esc(l.welcomeSub)}</div>
-      <div class="wl dim">${esc(found)}</div>${w.peek ? `<div class="wl dim">${esc(l.welcomeKeys(w.peek))}</div>` : ''}</div></div>`;
+      <div class="wl dim">${esc(found)}</div>${w.peek ? `<div class="wl dim">${esc(l.welcomeKeys(root.I18N.keyLabel(w.peek)))}</div>` : ''}</div></div>`;
   }
 
   // another session, kept small: its request, a thin progress bar and what it is doing
