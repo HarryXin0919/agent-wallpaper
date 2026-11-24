@@ -268,3 +268,98 @@ body.peek [data-sid] { cursor: pointer; }
 .calm .status .dot::after, .calm .card.live::after, .calm .arrow.live::before, .calm .seg.cur i::after { opacity: 0 !important; }
 .calm .card.live::after { opacity: .5 !important; }
 .still * { transition: none !important; }
+
+/* ---- macOS: the look of the system's own desktop widgets ----
+   One dark material for every panel with a hairline edge, no drop shadows, glows or coloured outlines; the system
+   colours; action rows like the ones in Shortcuts and Settings (a solid rounded tile with a white glyph); a chevron
+   between steps instead of an arrow. The window is transparent over the real wallpaper (see desktop-mac.mjs), so
+   nothing is drawn around the panels. src/platform.js puts "mac" on the page. */
+.mac body {
+  --mat: rgba(28, 28, 30, .86); --mat-hi: rgba(50, 50, 53, .92); --hair: rgba(255, 255, 255, .10);
+  --dim: rgba(235, 235, 245, .62); --fill: rgba(120, 120, 128, .24); --fill-hi: rgba(120, 120, 128, .44);
+  --wait: #ff9f0a; --err: #ff453a; --plus: #30d158; --edit: #ff9f0a; --web: #0a84ff; --agent: #64d2ff; --think: #7d7aff;
+}
+.mac body.lightglass { --mat: rgba(44, 44, 46, .64); --mat-hi: rgba(62, 62, 66, .74); }
+.mac .panel, .mac .other { background: var(--mat); border: 0; border-radius: 24px; box-shadow: inset 0 0 0 .5px var(--hair); }
+.mac .other { border-radius: 16px; }
+.mac .col::before { display: none; }
+.mac .title, .mac .ltitle, .mac .step, .mac .pct, .mac .card .t, .mac .ot { text-shadow: none; }
+.mac .title { letter-spacing: 0; }
+.mac .task .flow, .mac .uss { border-top-color: var(--hair); }
+
+/* the status is a dot and a line of text, in the system's colour for it */
+.mac .status { height: auto; padding: 0; gap: 8px; background: none; font-size: 13px; }
+.mac .brand { box-shadow: none; background: color-mix(in srgb, var(--c) 18%, transparent); letter-spacing: 0; }
+.mac .x { width: 22px; height: 22px; border-radius: 50%; font-size: 15px; background: var(--fill); }
+.mac .x.hover { background: var(--fill-hi); }
+
+/* progress and gauges: plain bars in one colour */
+.mac .seg, .mac .mtrack, .mac .ub { background: var(--fill); }
+.mac .ub { height: 6px; }
+.mac .ug .ub i { background: var(--c, #fff); }
+.mac .ug.warm .ub i { background: var(--wait); } .mac .ug.hot .ub i { background: var(--err); }
+.mac .ut { letter-spacing: 0; }
+.mac .us.live b { color: var(--plus); }
+.mac .spark i { background: rgba(235, 235, 245, .3); border-radius: 1.5px; } .mac .spark i.now { background: #fff; }
+
+/* the actions: rows straight on the material, as in a list in the system's own widgets — a solid rounded tile with a
+   white glyph, two lines of text, a hairline between rows. Only the row at work is filled; no outlines, no glow */
+.mac .card { background: none; border: 0; border-radius: 12px; }
+.mac .card.live { background: var(--fill); }
+.mac .card.live::after { display: none; }
+.mac .card.live.wait { background: color-mix(in srgb, var(--wait) 26%, transparent); }
+.mac .card .d .m { color: var(--err); }
+.mac .card .ic { border-radius: 9px; background: #636366; color: #fff; }
+.mac .k-edit .ic, .mac .k-write .ic { background: #ff9f0a; color: #fff; }
+.mac .k-web .ic { background: #0a84ff; color: #fff; }
+.mac .k-agent .ic { background: #30b0c7; color: #fff; }
+.mac .k-think .ic { background: #5e5ce6; color: #fff; }
+.mac .k-ask .ic { background: #ffd60a; color: #1c1c1e; }
+.mac .k-stuck .ic, .mac .card.err .ic { background: #ff453a; color: #fff; }
+.mac .lflow .card .ic { border-radius: 7.5px; }
+/* stacked rows line up with the text above them; the fill of the row at work reaches a little past it on both sides */
+.mac .v .flow .card { margin: 0 -12px; padding: 0 12px; height: 58px; }
+.mac .lflow .card { margin: 0 -10px; padding: 0 10px; height: 48px; border-radius: 11px; }
+.mac .v .flow .card::before, .mac .lflow .card::before { content: ""; position: absolute; left: 60px; right: 12px; top: -4px; height: 1px; background: var(--hair); transform: scaleY(.5); }
+.mac .lflow .card::before { left: 52px; right: 10px; top: -3px; }
+.mac .v .flow > .card:first-child::before, .mac .lflow > .card:first-child::before, .mac .card.live::before, .mac .card.live + .card::before, .mac .card.live + .arrow + .card::before,
+.mac .sep + .arrow + .card::before, .mac .chip + .arrow + .card::before, .mac .branch + .card::before, .mac .branch + .arrow + .card::before, .mac .h .flow .card::before { display: none; }
+/* how long it thought before a step: the row's trailing detail (a caption over the step when the steps run sideways) */
+.mac .tag { height: auto; padding: 0; border: 0; background: none; color: var(--dim); font-size: 12px; font-weight: 400; }
+.mac .tag i { display: none; }
+.mac .h .flow .tag { top: -20px; left: 14px; }
+.mac .h .task .flow { padding: 28px 16px 20px; } /* the first step lines up with the text above it */
+.mac .v .flow .tag, .mac .lflow .tag { top: 50%; left: auto; right: 12px; transform: translateY(-50%); }
+.mac .lflow .tag { right: 10px; font-size: 11.5px; }
+.mac .v .flow .card:has(.tag) .tx, .mac .lflow .card:has(.tag) .tx { padding-right: 104px; }
+.mac .chip { height: auto; padding: 0 4px; border: 0; background: none; }
+.mac .v .chip { height: auto; padding: 0 2px 4px; justify-items: start; }
+.mac .h .task .chip { padding-left: 14px; }
+.mac .sep::before, .mac .sep::after { background: var(--hair); }
+/* a chevron between steps; stacked rows need nothing between them */
+.mac .arrow { width: 24px; height: 12px; background: none; }
+.mac .arrow::after { right: auto; left: 7px; top: 2px; width: 7px; height: 7px; border: solid rgba(235, 235, 245, .32); border-width: 1.5px 1.5px 0 0; transform: rotate(45deg); }
+.mac .arrow.live::before { display: none; }
+.mac .v .arrow { width: auto; height: 8px; margin: 0; background: none; } .mac .v .arrow::after { display: none; }
+.mac .lflow { gap: 6px; margin-top: 12px; }
+.mac .branch { border-radius: 14px; } .mac .branch::before { width: 1px; background: var(--hair); }
+.mac .branch .lb { color: var(--dim); }
+.mac .v .branch { border: 0; background: rgba(120, 120, 128, .16); }
+.mac .mini { border-radius: 8px; background: var(--fill); color: #fff; } .mac .mini.live { outline: 0; background: var(--fill-hi); }
+
+/* the material is the system's own whenever the program can put it under the page (desktop-mac.mjs, "sysmat").
+   Glass takes the colour of the picture behind it, so two panels over different parts of a wallpaper would come out
+   in two colours: one neutral wash over the glass keeps them the same, and keeps white text readable. */
+.mac.sysmat body { --wash: rgba(36, 36, 38, .72); --mat-hi: rgba(58, 58, 62, .78); }
+.mac.sysmat body.lightglass { --wash: rgba(58, 58, 62, .5); --mat-hi: rgba(80, 80, 84, .58); }
+.mac.sysmat .panel, .mac.sysmat .other { background: var(--wash); box-shadow: none; }
+/* the frosted material of older systems lets more of the picture through than the glass does */
+.mac.sysmat.frost body { --wash: rgba(30, 30, 32, .82); --mat-hi: rgba(54, 54, 58, .86); }
+.mac.sysmat.frost body.lightglass { --wash: rgba(54, 54, 58, .62); --mat-hi: rgba(76, 76, 80, .68); }
+
+/* pointing at a task: the panel brightens (no lift, no outline) */
+.mac .panel[data-sid] { transition: background .2s; }
+.mac .panel[data-sid].hover, .mac .peek .panel[data-sid]:hover { transform: none; background: var(--mat-hi); }
+/* peek: the window itself blurs what is behind it (main.mjs), so the veil only dims a little */
+.mac body.peek { background: rgba(0, 0, 0, .30); }
+.mac.sysmat body.peek { background: rgba(0, 0, 0, .16); } /* less of it over the system's glass, which is dark already */

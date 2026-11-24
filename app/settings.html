@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' file:;">
 <title>Agent Wallpaper</title>
+<script src="../src/platform.js"></script>
 <style>
 /* The settings window, in the manner of a system preference pane: neutral greys, flat grouped lists, one accent
    (the icon's blue), line icons in the sidebar, and light or dark after the system. */
@@ -27,8 +28,8 @@
 html, body { height: 100%; }
 body { background: var(--bg); color: var(--text); font: 13.5px/1.4 "Segoe UI Variable Text", "Segoe UI", system-ui, "Microsoft YaHei UI", "PingFang SC", sans-serif;
   display: flex; overflow: hidden; user-select: none; -webkit-font-smoothing: antialiased; }
-::-webkit-scrollbar { width: 12px; } ::-webkit-scrollbar-thumb { background: var(--fill-h); border-radius: 99px; border: 3px solid transparent; background-clip: content-box; }
-::-webkit-scrollbar-thumb:hover { background: var(--track); border: 3px solid transparent; background-clip: content-box; }
+html:not(.mac) ::-webkit-scrollbar { width: 12px; } html:not(.mac) ::-webkit-scrollbar-thumb { background: var(--fill-h); border-radius: 99px; border: 3px solid transparent; background-clip: content-box; }
+html:not(.mac) ::-webkit-scrollbar-thumb:hover { background: var(--track); border: 3px solid transparent; background-clip: content-box; }
 :focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 
@@ -152,6 +153,49 @@ h1 .info { width: 16px; height: 16px; margin-left: 8px; vertical-align: 0; }
 #tip[hidden] { display: none; }
 h1 { margin-bottom: 18px; }
 .addrow { display: flex; align-items: center; } .addrow .add { width: auto; padding-right: 6px; }
+/* ---- macOS: the manner of System Settings. The traffic lights sit over a sidebar of the system's own material
+   (main.mjs gives the window a hidden title bar and sidebar vibrancy); sidebar rows carry a coloured tile and the
+   chosen one takes the accent colour; grouped lists with hairlines; the system's switch size, colours and font. ---- */
+.mac { --bg: #1e1e1e; --side: transparent; --panel: rgba(255, 255, 255, .05); --inset: rgba(0, 0, 0, .20); --line: rgba(255, 255, 255, .09);
+  --text: rgba(255, 255, 255, .86); --dim: rgba(255, 255, 255, .55); --faint: rgba(255, 255, 255, .36);
+  --fill: rgba(255, 255, 255, .08); --fill-h: rgba(255, 255, 255, .13); --raised: #636366; --track: rgba(255, 255, 255, .16);
+  --acc: #0a84ff; --link: #409cff; --ok: #30d158; --warn: #ff9f0a; --sys: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif; }
+@media (prefers-color-scheme: light) {
+  .mac { --bg: #ececec; --panel: rgba(0, 0, 0, .035); --inset: rgba(0, 0, 0, .045); --line: rgba(0, 0, 0, .09);
+    --text: rgba(0, 0, 0, .86); --dim: rgba(0, 0, 0, .52); --faint: rgba(0, 0, 0, .36);
+    --fill: rgba(0, 0, 0, .06); --fill-h: rgba(0, 0, 0, .10); --raised: #fff; --track: rgba(0, 0, 0, .13);
+    --acc: #007aff; --link: #0068d9; --ok: #248a3d; --warn: #b25000; }
+}
+.mac body { background: transparent; font: 13px/1.4 var(--sys); }
+.mac nav { background: none; padding: 52px 10px 14px; gap: 2px; -webkit-app-region: drag; }
+.mac .logo { padding: 0 8px 14px; }
+.mac nav button { position: relative; height: 30px; gap: 8px; padding: 0 8px; border-radius: 6px; color: var(--text); -webkit-app-region: no-drag; }
+.mac nav button::before { width: 20px; height: 20px; border-radius: 5px; background: var(--tile, #8e8e93); -webkit-mask: none; mask: none; }
+.mac nav button::after { content: ""; position: absolute; left: 11px; top: 8px; width: 14px; height: 14px; background: #fff; -webkit-mask: var(--i) center / contain no-repeat; mask: var(--i) center / contain no-repeat; }
+.mac nav button:hover { background: none; }
+.mac nav button.on { background: var(--acc); color: #fff; font-weight: 400; }
+.mac nav button[data-tab=ai] { --tile: #5e5ce6; } .mac nav button[data-tab=look] { --tile: #0a84ff; } .mac nav button[data-tab=usage] { --tile: #30d158; }
+.mac nav button[data-tab=behave] { --tile: #ff453a; } .mac nav button[data-tab=privacy] { --tile: #8e8e93; } .mac nav button[data-tab=keys] { --tile: #8e8e93; }
+.mac main { background: var(--bg); padding: 30px 28px 32px; }
+.mac main::before { content: ""; position: fixed; top: 0; left: 208px; right: 0; height: 28px; -webkit-app-region: drag; } /* the window is dragged by its top edge */
+.mac h1 { font: 700 22px/1.2 var(--sys); letter-spacing: 0; }
+.mac .box, .mac .guide, .mac .sample { box-shadow: inset 0 0 0 .5px var(--line); }
+.mac .row { min-height: 42px; padding: 8px 0; } .mac .row .l b, .mac .src .n, .mac .guide b { font-weight: 400; }
+.mac .sw { width: 38px; height: 22px; } .mac .sw::after { width: 18px; height: 18px; } .mac .sw.on::after { left: 18px; }
+.mac .btn { padding: 4px 11px; border-radius: 6px; background: var(--fill-h); font-size: 13px; font-weight: 400; }
+.mac .btn:hover { background: var(--track); }
+.mac .seg button { font-size: 13px; padding: 3px 11px; } .mac .seg button.on { font-weight: 400; }
+.mac select { background-color: transparent; padding: 4px 24px 4px 8px; border-radius: 6px; font-size: 13px; text-align-last: right;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='13'%3E%3Cpath d='M1.5 5l3-3 3 3M1.5 8l3 3 3-3' fill='none' stroke='%238e8e93' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-position: right 7px center; }
+.mac select:hover { background-color: var(--fill); }
+.mac input.text { border-radius: 6px; font-size: 13px; }
+.mac .key { min-width: 120px; padding: 4px 11px; font: 13px var(--sys); letter-spacing: 1px; }
+.mac .places code { font: 12px ui-monospace, "SF Mono", Menlo, monospace; }
+.mac .link, .mac .seg button, .mac .val { font-size: 13px; }
+/* the sources as one grouped list */
+.mac .src { margin-bottom: 0; border-radius: 0; box-shadow: inset 0 0 0 .5px var(--line); }
+.mac .src:not(.src + .src) { border-radius: 10px 10px 0 0; } .mac .src:not(:has(+ .src)) { border-radius: 0 0 10px 10px; margin-bottom: 8px; }
+.mac .src:not(.src + .src):not(:has(+ .src)) { border-radius: 10px; }
 </style>
 </head>
 <body>
