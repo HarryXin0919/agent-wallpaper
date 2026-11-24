@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' file:;">
 <title>Agent Wallpaper</title>
+<script src="../src/platform.js"></script>
 <style>
 /* the same look as the settings window: neutral greys, one accent, light or dark after the system */
 :root { color-scheme: dark;
@@ -60,6 +61,23 @@ h2:not(:first-child) { margin-top: 12px; }
 .acts button:hover { background: var(--fill); color: var(--text); }
 .acts kbd { font: 11px "Cascadia Mono", Consolas, monospace; color: var(--faint); margin-left: 6px; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+/* ---- macOS: a menu bar pop-up. The window itself is the system's popover material with its own corners and
+   shadow (main.mjs), so the page draws no background or border; the system colours and font. ---- */
+.mac { --bg: transparent; --line: rgba(255, 255, 255, .10); --text: rgba(255, 255, 255, .88); --dim: rgba(235, 235, 245, .60); --faint: rgba(235, 235, 245, .42);
+  --fill: rgba(255, 255, 255, .09); --track: rgba(255, 255, 255, .14); --bar: rgba(255, 255, 255, .88); --acc: #0a84ff;
+  --wait: #ff9f0a; --err: #ff453a; --ok: #30d158; --ff: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif; }
+@media (prefers-color-scheme: light) {
+  .mac { --line: rgba(0, 0, 0, .10); --text: rgba(0, 0, 0, .86); --dim: rgba(60, 60, 67, .68); --faint: rgba(60, 60, 67, .48);
+    --fill: rgba(0, 0, 0, .07); --track: rgba(0, 0, 0, .11); --bar: rgba(0, 0, 0, .78); --acc: #007aff;
+    --wait: #b25000; --err: #d70015; --ok: #248a3d; }
+}
+.mac #panel { background: none; border: 0; border-radius: 0; }
+.mac section { padding: 10px 14px; }
+.mac h2 { font-size: 11px; font-weight: 600; }
+.mac .t { border-radius: 6px; }
+.mac .acts { padding: 6px 8px; }
+.mac .acts button { border-radius: 6px; font-size: 13px; }
+.mac .acts kbd { font: 12px var(--ff); letter-spacing: .5px; }
 </style>
 </head>
 <body>

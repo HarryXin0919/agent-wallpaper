@@ -38,6 +38,19 @@
     const list = [...stage.querySelectorAll('[data-sid]')].map((el) => { const r = el.getBoundingClientRect(); return { id: el.getAttribute('data-sid'), x: r.x, y: r.y, w: r.width, h: r.height }; });
     const k = JSON.stringify(list.map((t) => [t.id, Math.round(t.x), Math.round(t.y), Math.round(t.w), Math.round(t.h)]));
     if (k !== lastTargets) { lastTargets = k; window.wall.targets(list); }
+    sendPanels();
+  }
+  // macOS: a panel's material is the system's, kept under the page by the program, so the page says where its panels
+  // are, how round, and how far a finished task has faded
+  let lastPanels = '', zoomNow = 1;
+  function sendPanels() {
+    if (!view.material) return;
+    const list = [...stage.querySelectorAll('.panel')].map((el) => {
+      const r = el.getBoundingClientRect(), col = el.closest('.col');
+      return { x: r.x, y: r.y, w: r.width, h: r.height, r: (parseFloat(getComputedStyle(el).borderTopLeftRadius) || 0) * zoomNow, a: col && col.style.opacity !== '' ? Number(col.style.opacity) : 1 };
+    });
+    const k = JSON.stringify(list.map((p) => [p.x, p.y, p.w, p.h, p.r, p.a].map((v) => Math.round(v * 100))));
+    if (k !== lastPanels) { lastPanels = k; window.wall.panels(list); }
   }
   window.wall.onWallpaper(setWallpaper);
   // the settings that change the picture (language, size, position, privacy, …)
@@ -48,6 +61,7 @@
     view = v; I18N.set(v.lang);
     setFont(v.font);
     document.documentElement.lang = v.lang === 'en' ? 'en' : 'zh-CN';
+    document.documentElement.classList.toggle('sysmat', !!v.material); document.documentElement.classList.toggle('frost', v.material === 'frost'); lastPanels = '';
     glassClass();
     document.body.classList.toggle('calm', v.motion !== 'full');
     document.body.classList.toggle('still', v.motion === 'off');
@@ -124,7 +138,7 @@
     // A dashboard screen and the peek view use the whole screen, a little bigger on a large one
     const big = PEEK || st.dashboard;
     const z = (view.scale || 1) * (big ? Math.max(1, Math.min(1.7, window.innerWidth / 1700)) : 1);
-    stage.style.zoom = z === 1 ? '' : String(z);
+    stage.style.zoom = z === 1 ? '' : String(z); zoomNow = z;
     const W = window.innerWidth / z, H = window.innerHeight / z;
     const list = pick(now);
     stage.classList.toggle('rest', !!(st.paused || st.covered));

@@ -421,6 +421,14 @@ function openSession(id) {
 // card, with the desktop itself under the cursor, counts: clicks in other apps and on icons are ignored.
 let pressId = null;
 ipcMain.on('targets', (e, list) => { const r = recOf(e.sender); if (r) r.targets = Array.isArray(list) ? list : []; });
+// macOS: the page says where its panels are, and the system's material is put under each of them (desktop-mac.mjs)
+ipcMain.on('panels', (e, list) => {
+  const r = recOf(e.sender), win = r ? r.win : fromPeek(e) ? peekWin : null;
+  if (!win || !Array.isArray(list) || !desk.material()) return;
+  const num = (v, lo, hi) => (Number.isFinite(v) ? Math.max(lo, Math.min(hi, v)) : 0);
+  const ok = desk.panels(win, list.slice(0, 24).map((p) => ({ x: num(p.x, -1e5, 1e5), y: num(p.y, -1e5, 1e5), w: num(p.w, 0, 1e5), h: num(p.h, 0, 1e5), r: num(p.r, 0, 200), a: num(p.a, 0, 1) })), { light: cfg.glass === 'light' });
+  if (!ok && !desk.material()) send('view', view()); // it could not be done: the page paints its own material again
+});
 function pollMouse() {
   const p = desk.cursor();
   const r = [...wins.values()].find((x) => live(x) && p.x >= x.rect.x && p.x < x.rect.x + x.rect.w && p.y >= x.rect.y && p.y < x.rect.y + x.rect.h);
@@ -453,6 +461,7 @@ const view = () => ({
   welcome: prefs.seenTask ? null : { found: foundNames(), peek: cfg.keys.peek },
   lang: I18N.lang, position: cfg.position, scale: cfg.scale, maxTasks: cfg.maxTasks, glass: cfg.glass, motion: cfg.motion, privacy: cfg.privacy,
   usage: cfg.usage, keepDone: cfg.keepDone, waitDone: cfg.waitDone,
+  material: desk.material(), // macOS: the system's own material ('glass' or 'frost') goes under the panels, the page paints none
   brands: { claude: { name: 'Claude', color: cfg.sources.claude.color, on: cfg.sources.claude.on }, codex: { name: 'Codex', color: cfg.sources.codex.color, on: cfg.sources.codex.on } },
 });
 // a screen chosen as the dashboard: no icons to avoid, bigger panels
@@ -484,6 +493,8 @@ function openSettings() {
   settingsWin = new BrowserWindow({
     width: 940, height: 680, minWidth: 820, minHeight: 560, title: 'Agent Wallpaper', backgroundColor: nativeTheme.shouldUseDarkColors ? '#1c1c1e' : '#f5f5f7', show: false, autoHideMenuBar: true, // the page follows the system's light or dark
     icon: path.join(here, '..', 'assets', 'tray-64.png'),
+    // macOS: the traffic lights sit over a sidebar of the system's own material, as in System Settings
+    ...(MAC ? { titleBarStyle: 'hiddenInset', vibrancy: 'sidebar', visualEffectState: 'followWindow', backgroundColor: '#00000000' } : {}),
     webPreferences: { preload: path.join(here, 'settings-preload.cjs'), contextIsolation: true, sandbox: true, spellcheck: false },
   });
   settingsWin.setMenu(null);
@@ -710,6 +721,8 @@ function togglePanel() {
   panelWin = new BrowserWindow({
     width: PANEL_W, height: panelH, show: false, frame: false, resizable: false, movable: false, minimizable: false, maximizable: false, fullscreenable: false,
     skipTaskbar: true, alwaysOnTop: true, transparent: true, backgroundColor: '#00000000', hasShadow: false, title: 'Agent Wallpaper',
+    // macOS: a menu bar pop-up of the system's own material, with the system's corners and shadow
+    ...(MAC ? { transparent: false, hasShadow: true, vibrancy: 'popover', visualEffectState: 'active' } : {}),
     webPreferences: { preload: path.join(here, 'panel-preload.cjs'), contextIsolation: true, sandbox: true, spellcheck: false },
   });
   panelWin.setMenu(null);
@@ -737,6 +750,8 @@ function togglePeek() {
   peekWin = new BrowserWindow({
     x: d.bounds.x, y: d.bounds.y, width: d.bounds.width, height: d.bounds.height, show: false, frame: false, transparent: true, backgroundColor: '#00000000',
     skipTaskbar: true, resizable: false, movable: false, minimizable: false, maximizable: false, fullscreenable: false, hasShadow: false, alwaysOnTop: true, title: 'Agent Wallpaper',
+    // macOS: the windows behind are blurred by the system instead of covered by a dark veil
+    ...(MAC ? { transparent: false, roundedCorners: false, vibrancy: 'fullscreen-ui', visualEffectState: 'active' } : {}),
     webPreferences: { preload: path.join(here, 'preload.cjs'), contextIsolation: true, sandbox: true, backgroundThrottling: false, spellcheck: false },
   });
   peekWin.setAlwaysOnTop(true, 'screen-saver');

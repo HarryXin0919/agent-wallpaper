@@ -209,3 +209,6 @@ export function claudeDesktopRunning() {
   } finally { X.CloseHandle(snap); }
   return found;
 }
+// the panels' material is drawn by the page here (the blurred copy of the wallpaper, or the tinted glass)
+export const material = () => '';
+export const panels = () => false;

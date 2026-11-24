@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld('wall', {
   onWallpaper: (fn) => ipcRenderer.on('wallpaper', (_e, w) => fn(w)),
   hello: () => ipcRenderer.invoke('hello'),
   targets: (list) => ipcRenderer.send('targets', list),
+  panels: (list) => ipcRenderer.send('panels', list), // macOS: where the panels are, for the system's material under them
   onHover: (fn) => ipcRenderer.on('hover', (_e, id) => fn(id)),
   onClearDone: (fn) => ipcRenderer.on('clearDone', () => fn()),
   onUsage: (fn) => ipcRenderer.on('usage', (_e, u) => fn(u)),
